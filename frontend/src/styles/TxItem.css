@@ -1,0 +1,80 @@
+.tx-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  margin-bottom: 7px;
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s ease;
+}
+
+/* Hidden state for stagger animation */
+.tx-hidden {
+  opacity: 0;
+  transform: translateX(-18px);
+}
+
+/* Visible state */
+.tx-visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Type variations */
+.tx-income {
+  border-left: 3px solid #22c55e;
+}
+
+.tx-expense {
+  border-left: 3px solid #f97316;
+}
+
+.icon-marker {
+  font-size: 15px;
+}
+
+.income-text {
+  color: #22c55e;
+}
+
+.expense-text {
+  color: #f97316;
+}
+
+.content-area {
+  flex: 1;
+}
+
+.tx-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.tx-date {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.amount {
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.delete-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0 4px;
+  transition: color 0.2s;
+}
+
+.delete-btn:hover {
+  color: #ef4444 !important;
+}

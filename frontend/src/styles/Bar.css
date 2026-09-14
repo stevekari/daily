@@ -1,0 +1,58 @@
+.bar-wrapper {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  position: relative;
+}
+
+.bar-label {
+  position: absolute;
+  bottom: calc(var(--bar-height) + 4px);
+  font-weight: 700;
+  white-space: nowrap;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+  transition: bottom 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.bar-label--daily {
+  font-size: 9px;
+}
+
+.bar-label--monthly {
+  font-size: 8px;
+}
+
+.bar-fill {
+  width: 100%;
+  height: var(--bar-height);
+  border-radius: 6px 6px 0 0;
+  transition:
+    height 0.55s cubic-bezier(0.34, 1.56, 0.64, 1),
+    background 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+/* Status: Normal (Under Limit) */
+.bar-fill.under {
+  background: linear-gradient(to top, #16a34a, #22c55e);
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+}
+
+.bar-label.under {
+  color: #22c55e;
+}
+
+/* Status: Over Limit */
+.bar-fill.over {
+  background: linear-gradient(to top, #ef4444, #f97316);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.55);
+}
+
+.bar-label.over {
+  color: #f97316;
+}

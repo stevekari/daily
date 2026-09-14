@@ -1,0 +1,766 @@
+/* ── App-level styles ───────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Exo 2', 'Segoe UI', sans-serif;
+  background: #0f0a2e;
+  color: #fff;
+}
+
+.app-theme {
+  min-height: 100vh;
+  transition: background-color 0.35s ease, color 0.35s ease;
+}
+
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 12px;
+  color: #fff;
+  background: rgba(249, 115, 22, 0.16);
+  border: 1px solid rgba(249, 115, 22, 0.42);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.theme-toggle:hover {
+  transform: translateY(-1px);
+  background: rgba(249, 115, 22, 0.25);
+  border-color: #f97316;
+}
+
+.app-theme--light {
+  color: #0f172a;
+  background-color: #f1f5f9;
+}
+
+/* ── Light Mode Form & Inputs ───────────────────────────────────────────── */
+.app-theme--light input,
+.app-theme--light select,
+.app-theme--light textarea {
+  color: #0f172a !important;
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+}
+
+.app-theme--light input::placeholder,
+.app-theme--light textarea::placeholder {
+  color: #64748b !important;
+}
+
+.app-theme--light select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+.app-theme--light .auth-wrapper {
+  background: linear-gradient(135deg, #eef2f6 0%, #f8fafc 100%) !important;
+}
+
+.app-theme--light .form-container {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08) !important;
+  color: #0f172a !important;
+}
+
+.app-theme--light .main-title,
+.app-theme--light h1,
+.app-theme--light h2,
+.app-theme--light h3 {
+  color: #0f172a !important;
+}
+
+.app-theme--light .sub-title {
+  color: #475569 !important;
+  font-weight: 500 !important;
+}
+
+.app-theme--light .auth-label {
+  color: #334155 !important;
+  font-weight: 700 !important;
+}
+
+.app-theme--light .auth-input {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+.app-theme--light .auth-input:focus {
+  border-color: #ea580c !important;
+  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.2) !important;
+}
+
+.app-theme--light .secondary-btn {
+  border-color: #ea580c !important;
+  color: #c2410c !important;
+  background: rgba(234, 88, 12, 0.08) !important;
+  font-weight: 800 !important;
+}
+
+.app-theme--light .back-button {
+  background: #ffedd5 !important;
+  border: 1px solid #fdba74 !important;
+  color: #c2410c !important;
+}
+
+.app-theme--light .auth-language-pills {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+.app-theme--light .auth-lang-btn {
+  color: #475569 !important;
+}
+
+.app-theme--light .auth-lang-btn:hover {
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+.app-theme--light .auth-lang-btn--active {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%) !important;
+  color: #ffffff !important;
+}
+
+.app-theme--light .auth-lang-modal-trigger {
+  color: #c2410c !important;
+}
+
+/* ── Light Mode Page & Cards ────────────────────────────────────────────── */
+.app-theme--light .ba-page,
+.app-theme--light .budget-app,
+.app-theme--light .main,
+.app-theme--light .budget-app-setup__main {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+.app-theme--light .ba-card,
+.app-theme--light .card,
+.app-theme--light .gauge-card,
+.app-theme--light .form-card,
+.app-theme--light .bs-card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.04) !important;
+  color: #0f172a !important;
+}
+
+/* ── Light Mode Clock & Header ──────────────────────────────────────────── */
+.app-theme--light .ba-brand-name {
+  color: #c2410c !important;
+}
+
+.app-theme--light .ba-brand-sub {
+  color: #64748b !important;
+}
+
+.app-theme--light .ba-clock {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06) !important;
+}
+
+.app-theme--light .ba-clock-time {
+  color: #0f172a !important;
+  text-shadow: none !important;
+  font-weight: 900 !important;
+}
+
+.app-theme--light .ba-colon-blink {
+  color: #ea580c !important;
+}
+
+.app-theme--light .ba-clock-date {
+  background: #f8fafc !important;
+  color: #334155 !important;
+  border: 1px solid #e2e8f0 !important;
+  font-weight: 700 !important;
+}
+
+.app-theme--light .ba-name-badge {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.app-theme--light .ba-name-label {
+  color: #64748b !important;
+  font-weight: 600 !important;
+}
+
+.app-theme--light .ba-name-display {
+  color: #c2410c !important;
+  font-weight: 800 !important;
+}
+
+.app-theme--light .ba-btn-icon {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #334155 !important;
+}
+
+.app-theme--light .theme-toggle {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  color: #0f172a !important;
+  font-weight: 700 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+}
+
+.app-theme--light .theme-toggle:hover {
+  background: #f8fafc !important;
+  border-color: #ea580c !important;
+  color: #ea580c !important;
+}
+
+/* ── Light Mode Mobile Navigation ───────────────────────────────────────── */
+.app-theme--light .mobile-top-bar {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08) !important;
+}
+
+.app-theme--light .mobile-brand-title {
+  color: #0f172a !important;
+}
+
+.app-theme--light .mobile-icon-btn {
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  color: #334155 !important;
+}
+
+.app-theme--light .sidebar-backdrop {
+  background: rgba(15, 23, 42, 0.5) !important;
+}
+
+/* ── Light Mode Budget Stats & Progress ─────────────────────────────────── */
+.app-theme--light .ba-budget-label,
+.app-theme--light .ba-stat-label,
+.app-theme--light .stat,
+.app-theme--light .gauge-stat-label,
+.app-theme--light .bs-gauge-stat-label,
+.app-theme--light .bs-summary-label {
+  color: #475569 !important;
+  font-weight: 700 !important;
+}
+
+.app-theme--light .ba-budget-amount,
+.app-theme--light .bs-total-budget-title {
+  color: #c2410c !important;
+}
+
+.app-theme--light .ba-budget-hint,
+.app-theme--light .ba-progress-pct,
+.app-theme--light .bs-chart-subtitle,
+.app-theme--light .bs-budget-cap,
+.app-theme--light .limit-label {
+  color: #64748b !important;
+  font-weight: 600 !important;
+}
+
+.app-theme--light .ba-stats-row,
+.app-theme--light .stats-row {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.app-theme--light .ba-stat-value,
+.app-theme--light .stat__value--white {
+  color: #0f172a !important;
+}
+
+.app-theme--light .ba-stat-value--expense,
+.app-theme--light .gauge-stat-value.spent {
+  color: #dc2626 !important;
+}
+
+.app-theme--light .ba-stat-value--income,
+.app-theme--light .gauge-stat-value.safe {
+  color: #16a34a !important;
+}
+
+.app-theme--light .gauge-stat-value.total {
+  color: #c2410c !important;
+}
+
+.app-theme--light .gauge-total-label,
+.app-theme--light .budget-total {
+  color: #0f172a !important;
+}
+
+.app-theme--light .ba-stat-divider,
+.app-theme--light .stats-divider {
+  background: #e2e8f0 !important;
+  color: #cbd5e1 !important;
+}
+
+.app-theme--light .ba-progress-track {
+  background: #e2e8f0 !important;
+}
+
+.app-theme--light .ba-section-title,
+.app-theme--light .chart-title,
+.app-theme--light .bs-chart-title,
+.app-theme--light .bs-main-title {
+  color: #0f172a !important;
+}
+
+/* ── Light Mode Form Controls ───────────────────────────────────────────── */
+.app-theme--light .ba-input,
+.app-theme--light .form-input,
+.app-theme--light .bs-form-input {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  color: #0f172a !important;
+  font-weight: 600 !important;
+}
+
+.app-theme--light .ba-input:focus,
+.app-theme--light .form-input:focus,
+.app-theme--light .bs-form-input:focus {
+  border-color: #ea580c !important;
+  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.2) !important;
+}
+
+.app-theme--light .ba-type-btn--expense {
+  background: #fee2e2 !important;
+  border: 1.5px solid #fca5a5 !important;
+  color: #b91c1c !important;
+  font-weight: 800 !important;
+}
+
+.app-theme--light .ba-type-btn--income {
+  background: #dcfce7 !important;
+  border: 1.5px solid #86efac !important;
+  color: #15803d !important;
+  font-weight: 800 !important;
+}
+
+.app-theme--light .ba-datetime-icon {
+  color: #64748b !important;
+}
+
+/* ── Light Mode Charts & Bars ───────────────────────────────────────────── */
+.app-theme--light .day-header--today {
+  background: #ffedd5 !important;
+  color: #c2410c !important;
+  font-weight: 800 !important;
+}
+
+.app-theme--light .day-header--other,
+.app-theme--light .bar-day-label:not(.today) {
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+  font-weight: 700 !important;
+}
+
+.app-theme--light .bar-day-label.today {
+  background: #ffedd5 !important;
+  color: #c2410c !important;
+  font-weight: 800 !important;
+}
+
+.app-theme--light .daily-amount--over,
+.app-theme--light .monthly-amount--over {
+  color: #dc2626 !important;
+  font-weight: 700 !important;
+}
+
+.app-theme--light .daily-amount--under,
+.app-theme--light .monthly-amount--under {
+  color: #64748b !important;
+  font-weight: 600 !important;
+}
+
+.app-theme--light .month-label--current,
+.app-theme--light .bar-month-label.current {
+  color: #c2410c !important;
+  font-weight: 800 !important;
+}
+
+.app-theme--light .month-label--other,
+.app-theme--light .bar-month-label:not(.current) {
+  color: #475569 !important;
+  font-weight: 700 !important;
+}
+
+.app-theme--light .bars-container,
+.app-theme--light .bar-track {
+  background: #f1f5f9 !important;
+}
+
+.app-theme--light .limit-line,
+.app-theme--light .chart-caption,
+.app-theme--light .bs-limit-line,
+.app-theme--light .monthly-cap-note,
+.app-theme--light .monthly-caption {
+  border-color: #cbd5e1 !important;
+  color: #475569 !important;
+  font-weight: 600 !important;
+}
+
+.app-theme--light .bar-label.under {
+  color: #15803d !important;
+  text-shadow: none !important;
+  font-weight: 800 !important;
+}
+
+.app-theme--light .bar-label.over {
+  color: #b91c1c !important;
+  text-shadow: none !important;
+  font-weight: 800 !important;
+}
+
+/* ── Light Mode Transactions ────────────────────────────────────────────── */
+.app-theme--light .ba-tx-list,
+.app-theme--light .tx-list {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.app-theme--light .ba-tx-row,
+.app-theme--light .tx-row,
+.app-theme--light .tx-item {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.app-theme--light .ba-tx-row:hover,
+.app-theme--light .tx-item:hover {
+  background: #f1f5f9 !important;
+}
+
+.app-theme--light .ba-tx-name,
+.app-theme--light .tx-name,
+.app-theme--light .tx-title {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+}
+
+.app-theme--light .ba-tx-meta,
+.app-theme--light .tx-date {
+  color: #64748b !important;
+  font-weight: 500 !important;
+}
+
+.app-theme--light .ba-tx-reason {
+  color: #c2410c !important;
+  font-weight: 600 !important;
+}
+
+.app-theme--light .ba-tx-amount--expense,
+.app-theme--light .tx-amount.expense,
+.app-theme--light .expense-text {
+  color: #dc2626 !important;
+  font-weight: 900 !important;
+}
+
+.app-theme--light .ba-tx-amount--income,
+.app-theme--light .tx-amount.income,
+.app-theme--light .income-text {
+  color: #16a34a !important;
+  font-weight: 900 !important;
+}
+
+.app-theme--light .tab-btn--active,
+.app-theme--light .btn-tab.active {
+  background: #ea580c !important;
+  color: #ffffff !important;
+}
+
+.app-theme--light .tab-btn--inactive,
+.app-theme--light .btn-tab.inactive {
+  background: #e2e8f0 !important;
+  color: #475569 !important;
+  font-weight: 700 !important;
+}
+
+.app-theme--light .period-summary,
+.app-theme--light .tx-summary {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.app-theme--light .period-summary__label,
+.app-theme--light .tx-summary-label {
+  color: #64748b !important;
+  font-weight: 700 !important;
+}
+
+.app-theme--light .period-summary__value--net,
+.app-theme--light .tx-summary-value.net-pos {
+  color: #0f172a !important;
+  font-weight: 800 !important;
+}
+
+.app-theme--light .ba-btn-delete,
+.app-theme--light .btn-delete,
+.app-theme--light .delete-btn {
+  background: #fee2e2 !important;
+  border: 1px solid #fca5a5 !important;
+  color: #b91c1c !important;
+}
+
+.app-theme--light .ba-tx-empty,
+.app-theme--light .tx-empty {
+  color: #64748b !important;
+}
+
+/* ── Light Mode Modals & Language Picker ────────────────────────────────── */
+.app-theme--light .ba-modal-backdrop,
+.app-theme--light .bs-modal-backdrop {
+  background: rgba(15, 23, 42, 0.5) !important;
+}
+
+.app-theme--light .ba-modal,
+.app-theme--light .bs-modal,
+.app-theme--light .language-picker {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.15) !important;
+}
+
+.app-theme--light .ba-modal-title,
+.app-theme--light .language-picker h2 {
+  color: #c2410c !important;
+}
+
+.app-theme--light .ba-label,
+.app-theme--light .language-picker-hint {
+  color: #475569 !important;
+  font-weight: 700 !important;
+}
+
+.app-theme--light .ba-btn-ghost {
+  background: #f1f5f9 !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #334155 !important;
+}
+
+.app-theme--light .ba-language-link,
+.app-theme--light .bs-language-link {
+  color: #c2410c !important;
+  border-color: #e2e8f0 !important;
+}
+
+.app-theme--light .ba-language-link span,
+.app-theme--light .bs-language-link span {
+  color: #64748b !important;
+}
+
+.app-theme--light .language-option {
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #1e293b !important;
+  font-weight: 700 !important;
+}
+
+.app-theme--light .language-option:hover,
+.app-theme--light .language-option--selected {
+  background: #ffedd5 !important;
+  border-color: #ea580c !important;
+  color: #c2410c !important;
+}
+
+.app-theme--light .footer,
+.app-theme--light .main-footer,
+.app-theme--light .bs-footer {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #64748b !important;
+}
+
+.app-theme--light .footer__copy {
+  color: #64748b !important;
+}
+
+/* Loading screen */
+.app-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: #0f0a2e;
+  color: #fff;
+  font-family: 'Exo 2', 'Segoe UI', sans-serif;
+  text-align: center;
+}
+
+.app-loading-icon {
+  margin-bottom: 16px;
+  font-size: 48px;
+}
+
+.app-loading-text {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+.language-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(7, 5, 26, 0.84);
+  backdrop-filter: blur(12px);
+  animation: fadeIn 0.25s ease;
+}
+
+.language-picker {
+  width: min(100%, 430px);
+  padding: 38px;
+  color: #fff;
+  background: linear-gradient(145deg, #29205b, #17132f);
+  border: 1px solid rgba(249, 115, 22, 0.4);
+  border-radius: 20px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+  animation: slideDown 0.35s ease;
+}
+
+.language-picker-mark {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 22px;
+  color: #fff;
+  background: #f97316;
+  border-radius: 14px;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.language-picker-eyebrow {
+  margin-bottom: 8px;
+  color: #fb923c;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 2px;
+}
+
+.language-picker h2 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.language-picker-hint {
+  margin: 10px 0 24px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+}
+
+.language-options {
+  display: grid;
+  gap: 10px;
+}
+
+.language-option,
+.language-continue {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 13px 15px;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.language-option:hover,
+.language-option--selected {
+  color: #fff;
+  background: rgba(249, 115, 22, 0.16);
+  border-color: rgba(249, 115, 22, 0.7);
+}
+
+.language-continue {
+  justify-content: center;
+  gap: 10px;
+  margin-top: 22px;
+  color: #fff;
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  border: 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+@media (max-width: 520px) {
+  .form-container {
+    width: calc(100% - 24px) !important;
+    padding: 28px 20px !important;
+    border-radius: 16px !important;
+  }
+
+  .language-picker {
+    padding: 28px 20px;
+  }
+
+  .language-picker h2 {
+    font-size: 24px;
+  }
+}

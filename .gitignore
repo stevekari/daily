@@ -1,0 +1,10 @@
+.DS_Store
+*.log
+budget/
+backend/target/
+frontend/node_modules/
+frontend/dist/
+steve-budget-app/node_modules/
+steve-budget-app/dist/
+.idea/
+.vscode/
