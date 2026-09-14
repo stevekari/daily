@@ -41,9 +41,9 @@ export default function NotificationCenter({
           </div>
           <button
             type="button"
-            className="sidebar-close-btn"
-            style={{ display: "flex", position: "static" }}
+            className="modal-close-btn"
             onClick={onClose}
+            aria-label="Close"
           >
             ✕
           </button>

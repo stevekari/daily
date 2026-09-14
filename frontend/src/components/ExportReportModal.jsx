@@ -37,7 +37,12 @@ export default function ExportReportModal({
           <h2 style={{ fontSize: 20, fontWeight: 900, color: "#f97316", margin: 0 }}>
             📄 {t("exportStatement")}
           </h2>
-          <button type="button" className="sidebar-close-btn" style={{ display: "flex", position: "static" }} onClick={onClose}>
+          <button
+            type="button"
+            className="modal-close-btn"
+            onClick={onClose}
+            aria-label="Close"
+          >
             ✕
           </button>
         </div>

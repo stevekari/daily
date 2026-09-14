@@ -26,7 +26,12 @@ export default function AchievementsModal({
               {unlockedCount} / {totalBadges} {t("badges")} unlocked ({progressPct}%)
             </p>
           </div>
-          <button type="button" className="sidebar-close-btn" style={{ display: "flex", position: "static" }} onClick={onClose}>
+          <button
+            type="button"
+            className="modal-close-btn"
+            onClick={onClose}
+            aria-label="Close"
+          >
             ✕
           </button>
         </div>
