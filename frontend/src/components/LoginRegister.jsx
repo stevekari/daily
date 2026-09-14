@@ -130,6 +130,14 @@ export default function LoginRegister({ onLoginSuccess }) {
         setError(
           "Domain not authorized in Firebase. Add your domain in Firebase Console: Authentication > Settings > Authorized domains."
         );
+      } else if (err.code === "auth/invalid-api-key" || err.code === "auth/api-key-not-valid.Please pass a valid API key.") {
+        setError(
+          "Invalid Firebase API key. Please verify your Firebase project credentials."
+        );
+      } else if (err.code === "auth/popup-blocked") {
+        setError(
+          "Popup blocked by browser. Please allow popups for this site to sign in with Google."
+        );
       } else if (err.code !== "auth/popup-closed-by-user" && err.code !== "auth/cancelled-popup-request") {
         setError(err.message || "Google sign in failed");
       }
