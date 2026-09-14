@@ -1724,47 +1724,53 @@ export default function BudgetApp({ userId, username, onLogout }) {
 
             {/* Transactions List Card with Type Separation Bar */}
             <div className="card">
-              <div className="tx-header">
-                <div>
-                  <h3 className="chart-title">📊 {t("transactions")}</h3>
+              <div className="tx-header-container">
+                {/* Top Row: Title on Left, Type Filter on Right */}
+                <div className="tx-header-top">
+                  <div className="tx-title-wrapper">
+                    <h3 className="chart-title" style={{ margin: 0 }}>📊 {t("transactions")}</h3>
+                    <span className="tx-count-pill">{filteredTransactions.length}</span>
+                  </div>
+
+                  {/* Separation Filter Bar for Expenses and Income */}
+                  <div className="type-filter-bar">
+                    {[
+                      { id: "ALL", icon: "🌟", label: t("allTransactions") || "All" },
+                      { id: "EXPENSE", icon: "💸", label: t("expensesTab") || "Expenses" },
+                      { id: "INCOME", icon: "💵", label: t("incomeTab") || "Income" },
+                    ].map((filter) => (
+                      <button
+                        key={filter.id}
+                        type="button"
+                        onClick={() => setTypeFilter(filter.id)}
+                        className={`type-filter-btn ${typeFilter === filter.id ? `active-${filter.id.toLowerCase()}` : ""}`}
+                      >
+                        <span className="type-filter-icon">{filter.icon}</span>
+                        <span className="type-filter-label">{filter.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                {/* Separation Filter Bar for Expenses and Income */}
-                <div className="type-filter-bar">
-                  {[
-                    { id: "ALL", icon: "🌟", label: t("allTransactions") || "All" },
-                    { id: "EXPENSE", icon: "💸", label: t("expensesTab") || "Expenses" },
-                    { id: "INCOME", icon: "💵", label: t("incomeTab") || "Income" },
-                  ].map((filter) => (
-                    <button
-                      key={filter.id}
-                      type="button"
-                      onClick={() => setTypeFilter(filter.id)}
-                      className={`type-filter-btn ${typeFilter === filter.id ? `active-${filter.id.toLowerCase()}` : ""}`}
-                    >
-                      <span>{filter.icon}</span>
-                      <span>{filter.label}</span>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Period filter tabs */}
-                <div className="tx-tabs">
-                  {[
-                    { id: "all", label: "All Time" },
-                    { id: "daily", label: t("daily") || "Daily" },
-                    { id: "weekly", label: t("weekly") || "Weekly" },
-                    { id: "monthly", label: t("monthly") || "Monthly" },
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setTabMode(tab.id)}
-                      className={`btn-tab ${tabMode === tab.id ? "active" : "inactive"}`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
+                {/* Period filter tabs underneath */}
+                <div className="tx-header-sub">
+                  <div className="tx-tabs">
+                    {[
+                      { id: "all", label: "All Time" },
+                      { id: "daily", label: t("daily") || "Daily" },
+                      { id: "weekly", label: t("weekly") || "Weekly" },
+                      { id: "monthly", label: t("monthly") || "Monthly" },
+                    ].map((tab) => (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setTabMode(tab.id)}
+                        className={`btn-tab ${tabMode === tab.id ? "active" : "inactive"}`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 

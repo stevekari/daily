@@ -1291,46 +1291,105 @@ select.form-input,
   transition: color 0.3s ease;
 }
 
-/* ─── Transactions ────────────────────────────────────── */
+/* ─── Transactions Header & Filters ───────────────────── */
 
-.tx-header {
+.tx-header-container {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  gap: 14px;
   margin-bottom: 20px;
   width: 100%;
   box-sizing: border-box;
 }
 
+.tx-header,
+.tx-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.tx-title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tx-count-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.tx-header-sub {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  box-sizing: border-box;
+  padding-top: 2px;
+}
+
 .tx-tabs {
   display: flex;
-  gap: 6px;
+  align-items: center;
+  gap: 8px;
   max-width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.tx-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .btn-tab {
-  padding: 6px 12px;
-  border: none;
-  border-radius: 8px;
+  padding: 7px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
   color: #fff;
   cursor: pointer;
   font-weight: 700;
-  font-size: 11px;
+  font-size: 12px;
   white-space: nowrap;
-  transition: background 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
 }
 
 .btn-tab.active {
-  background: #f97316;
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color: #fff;
+  border-color: #f97316;
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.35);
+  transform: translateY(-1px);
 }
 
 .btn-tab.inactive {
   background: rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.btn-tab.inactive:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 .tx-summary {
@@ -1424,7 +1483,7 @@ select.form-input,
   border-left: 4px solid #22c55e;
 }
 
-.tx-row > div:first-child {
+.tx-row>div:first-child {
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -1928,18 +1987,33 @@ select.form-input,
     scroll-snap-align: start;
   }
 
-  .tx-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
+  .tx-header-container {
+    gap: 10px;
+    margin-bottom: 14px;
     width: 100%;
     box-sizing: border-box;
+  }
+
+  .tx-header,
+  .tx-header-top {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .tx-title-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
   }
 
   .type-filter-bar {
     width: 100%;
     box-sizing: border-box;
-    margin-bottom: 6px;
+    margin-bottom: 0;
     display: flex;
     gap: 4px;
     padding: 3px;
@@ -1954,6 +2028,11 @@ select.form-input,
     justify-content: center;
   }
 
+  .tx-header-sub {
+    width: 100%;
+    padding-top: 0;
+  }
+
   .tx-tabs {
     width: 100%;
     overflow-x: auto;
@@ -1964,7 +2043,7 @@ select.form-input,
   }
 
   .btn-tab {
-    padding: 6px 10px;
+    padding: 6px 11px;
     font-size: 11px;
     white-space: nowrap;
     flex-shrink: 0;
@@ -2004,7 +2083,7 @@ select.form-input,
     overflow: hidden;
   }
 
-  .tx-row > div:first-child {
+  .tx-row>div:first-child {
     width: 100%;
     min-width: 0;
     overflow: hidden;
@@ -3271,31 +3350,33 @@ select.form-input,
 
 /* ─── Type Filter Bar (Expenses / Income Switch) ────────────────────── */
 .type-filter-bar {
-  display: flex;
-  gap: 6px;
-  background: rgba(0, 0, 0, 0.28);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.35);
   padding: 4px;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  margin-bottom: 16px;
+  margin-bottom: 0;
+  box-sizing: border-box;
 }
 
 .type-filter-btn {
-  flex: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 8px 12px;
+  padding: 6px 14px;
   background: transparent;
   border: 0;
   border-radius: 8px;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.75);
   font-family: inherit;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
 }
 
 .type-filter-btn:hover {
@@ -3307,6 +3388,7 @@ select.form-input,
   background: rgba(255, 255, 255, 0.18);
   color: #fff;
   font-weight: 800;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .type-filter-btn.active-expense {
@@ -3321,6 +3403,15 @@ select.form-input,
   color: #fff;
   font-weight: 800;
   box-shadow: 0 4px 14px rgba(34, 197, 94, 0.35);
+}
+
+.type-filter-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.type-filter-label {
+  line-height: 1;
 }
 
 /* ─── Dedicated Income & Expenses Records Views ──────────────────────── */
@@ -5406,9 +5497,21 @@ select.form-input,
   border-color: #ffffff;
 }
 
-.app-theme--light .btn-tab.inactive {
-  background: #e2e8f0;
+.app-theme--light .tx-count-pill {
+  background: #f1f5f9;
   color: #475569;
+  border-color: #cbd5e1;
+}
+
+.app-theme--light .btn-tab.inactive {
+  background: #f1f5f9;
+  color: #475569;
+  border-color: #e2e8f0;
+}
+
+.app-theme--light .btn-tab.inactive:hover {
+  background: #e2e8f0;
+  color: #0f172a;
 }
 
 .app-theme--light .tx-row {
