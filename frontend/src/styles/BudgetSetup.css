@@ -1295,25 +1295,34 @@ select.form-input,
 
 .tx-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 20px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .tx-tabs {
   display: flex;
-  gap: 10px;
+  gap: 6px;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .btn-tab {
   padding: 6px 12px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   color: #fff;
   cursor: pointer;
   font-weight: 700;
   font-size: 11px;
+  white-space: nowrap;
   transition: background 0.2s;
+  flex-shrink: 0;
 }
 
 .btn-tab.active {
@@ -1326,23 +1335,31 @@ select.form-input,
 
 .tx-summary {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 15px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
   margin-bottom: 20px;
   padding-bottom: 20px;
   border-bottom: 1px solid rgba(139, 92, 246, 0.3);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .tx-summary-label {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.6);
   margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tx-summary-value {
   font-size: 16px;
   font-weight: 900;
   margin: 4px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tx-summary-value.expense {
@@ -1362,8 +1379,14 @@ select.form-input,
 }
 
 .tx-list {
-  max-height: 300px;
+  max-height: 380px;
   overflow-y: auto;
+  overflow-x: hidden;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .tx-empty {
@@ -1376,10 +1399,21 @@ select.form-input,
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px;
-  margin-bottom: 8px;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 0;
   background: rgba(0, 0, 0, 0.2);
-  border-radius: 10px;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  word-break: break-word;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.tx-row:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .tx-row.expense {
@@ -1390,27 +1424,41 @@ select.form-input,
   border-left: 4px solid #22c55e;
 }
 
+.tx-row > div:first-child {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
 .tx-name {
   font-weight: 700;
   margin: 0;
   font-size: 13px;
+  line-height: 1.4;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .tx-date {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.5);
-  margin: 2px 0 0;
+  margin: 3px 0 0;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .tx-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .tx-amount {
   font-weight: 900;
   margin: 0;
+  font-size: 15px;
+  white-space: nowrap;
 }
 
 .tx-amount.expense {
@@ -1426,10 +1474,15 @@ select.form-input,
   border: none;
   color: #fca5a5;
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
+  transition: all 0.2s;
   font-size: 10px;
   font-weight: 700;
+}
+
+.btn-delete:hover {
+  background: rgba(239, 68, 68, 0.4);
 }
 
 /* ─── Footer ──────────────────────────────────────────── */
@@ -1877,8 +1930,28 @@ select.form-input,
 
   .tx-header {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 12px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .type-filter-bar {
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 6px;
+    display: flex;
+    gap: 4px;
+    padding: 3px;
+  }
+
+  .type-filter-btn {
+    flex: 1;
+    padding: 6px 4px;
+    font-size: 11px;
+    gap: 4px;
+    white-space: nowrap;
+    justify-content: center;
   }
 
   .tx-tabs {
@@ -1886,12 +1959,15 @@ select.form-input,
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     padding-bottom: 4px;
+    display: flex;
+    gap: 6px;
   }
 
   .btn-tab {
     padding: 6px 10px;
     font-size: 11px;
     white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .tx-summary {
@@ -1899,21 +1975,58 @@ select.form-input,
     gap: 6px;
     margin-bottom: 14px;
     padding-bottom: 14px;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .tx-summary-label {
-    font-size: 10px;
+    font-size: 9.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .tx-summary-value {
-    font-size: 13px;
+    font-size: 12.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .tx-row {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 8px;
     padding: 10px 12px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .tx-row > div:first-child {
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .tx-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-size: 12.5px;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  .tx-cat-chip {
+    font-size: 10px;
+    padding: 1.5px 6px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .tx-right {
@@ -1923,6 +2036,7 @@ select.form-input,
     align-items: center;
     border-top: 1px dashed rgba(255, 255, 255, 0.15);
     padding-top: 8px;
+    box-sizing: border-box;
   }
 
   .bs-modal {
