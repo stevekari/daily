@@ -35,8 +35,10 @@ export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfi
 // Initialize Firebase Auth
 export const auth = getAuth(app);
 
-// Initialize Google Auth Provider
+// Initialize Google Auth Provider with recommended scopes
 export const googleProvider = new GoogleAuthProvider();
+googleProvider.addScope("profile");
+googleProvider.addScope("email");
 googleProvider.setCustomParameters({ prompt: "select_account" });
 
 // Initialize Analytics conditionally (supported in browser environments)
@@ -53,13 +55,16 @@ if (typeof window !== "undefined") {
 
 /**
  * Sign in with Google Popup
- * Returns Firebase User and ID Token
+ * Returns Firebase User, ID Token, Access Token, and Credential
  */
 export async function signInWithGoogle() {
   const result = await signInWithPopup(auth, googleProvider);
+  const credential = GoogleAuthProvider.credentialFromResult(result);
+  const accessToken = credential?.accessToken;
   const user = result.user;
   const idToken = await user.getIdToken();
-  return { user, idToken };
+  console.log("Successfully signed in with Google!", user);
+  return { user, idToken, accessToken, credential };
 }
 
 /**
