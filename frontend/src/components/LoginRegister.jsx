@@ -122,7 +122,15 @@ export default function LoginRegister({ onLoginSuccess }) {
         setTimeout(() => onLoginSuccess(localUserId), 600);
       }
     } catch (err) {
-      if (err.code !== "auth/popup-closed-by-user" && err.code !== "auth/cancelled-popup-request") {
+      if (err.code === "auth/operation-not-allowed") {
+        setError(
+          "Google Sign-In is not enabled in your Firebase project yet. Enable it in Firebase Console: Authentication > Sign-in method > Google."
+        );
+      } else if (err.code === "auth/unauthorized-domain") {
+        setError(
+          "Domain not authorized in Firebase. Add your domain in Firebase Console: Authentication > Settings > Authorized domains."
+        );
+      } else if (err.code !== "auth/popup-closed-by-user" && err.code !== "auth/cancelled-popup-request") {
         setError(err.message || "Google sign in failed");
       }
     } finally {
