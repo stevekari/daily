@@ -26,18 +26,25 @@ function AppContent() {
 
     async function checkBudget() {
       if (currentUser?.id) {
+        const localBudget = localStorage.getItem(`budgetUser_budget_${currentUser.id}`);
+        if (localBudget && parseFloat(localBudget) > 0) {
+          if (isMounted) setHasBudget(true);
+        }
+
         try {
-          const budgets = await getUserBudgets(currentUser.id);
-          if (isMounted) {
-            if (budgets && budgets.length > 0) {
-              setHasBudget(true);
-            } else {
-              setHasBudget(false);
+          const numericUserId = parseInt(currentUser.id);
+          if (!isNaN(numericUserId) && numericUserId > 0) {
+            const budgets = await getUserBudgets(currentUser.id);
+            if (isMounted) {
+              if (budgets && budgets.length > 0) {
+                setHasBudget(true);
+              } else if (!localBudget) {
+                setHasBudget(false);
+              }
             }
           }
         } catch (err) {
-          console.warn("Session check:", err.message);
-          // If token expired or user not found, clear stale credentials
+          console.warn("Session check notice:", err.message);
           if (
             (err.message && err.message.toLowerCase().includes("unauthorized")) ||
             (err.message && err.message.toLowerCase().includes("user not found")) ||
@@ -81,15 +88,24 @@ function AppContent() {
     };
     setCurrentUser(userObj);
 
+    const localBudget = localStorage.getItem(`budgetUser_budget_${userId}`);
+    if (localBudget && parseFloat(localBudget) > 0) {
+      setHasBudget(true);
+      return;
+    }
+
     try {
-      const budgets = await getUserBudgets(userId);
-      if (budgets && budgets.length > 0) {
-        setHasBudget(true);
-      } else {
-        setHasBudget(false);
+      const numericUserId = parseInt(userId);
+      if (!isNaN(numericUserId) && numericUserId > 0) {
+        const budgets = await getUserBudgets(userId);
+        if (budgets && budgets.length > 0) {
+          setHasBudget(true);
+          return;
+        }
       }
-    } catch {
       setHasBudget(false);
+    } catch {
+      setHasBudget(Boolean(localBudget));
     }
   };
 

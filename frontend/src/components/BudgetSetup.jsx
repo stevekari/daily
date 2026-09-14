@@ -54,34 +54,40 @@ export default function BudgetSetup({ userId, username, onBudgetCreated, onLogou
     setLoading(true);
 
     try {
-      const payload = {
-        userId: parseInt(userId),
-        user: { id: parseInt(userId) },
-        name: name.trim() || "Monthly Budget",
-        totalBudget: parsedBudget,
-        dailyLimit: parsedDaily,
-        monthlyLimit: parsedBudget,
-      };
-
-      await createOrUpdateBudget(payload);
-
-      // Save local preferences
+      // 1. Save local preferences immediately so user experience is fast and persistent
       localStorage.setItem(`budgetUser_budget_${userId}`, String(parsedBudget));
       localStorage.setItem(`budgetUser_daily_${userId}`, String(parsedDaily));
       localStorage.setItem(`budgetUser_name_${userId}`, name.trim() || username);
       localStorage.removeItem(`pendingBudget_${username}`);
 
+      // 2. Sync to Spring Boot database if numeric user ID exists
+      const numericUserId = parseInt(userId);
+      if (!isNaN(numericUserId) && numericUserId > 0) {
+        const payload = {
+          userId: numericUserId,
+          user: { id: numericUserId },
+          name: name.trim() || "Monthly Budget",
+          totalBudget: parsedBudget,
+          dailyLimit: parsedDaily,
+          monthlyLimit: parsedBudget,
+        };
+
+        try {
+          await createOrUpdateBudget(payload);
+        } catch (apiErr) {
+          console.warn("Backend budget sync notice (saved locally):", apiErr.message);
+        }
+      }
+
       if (onBudgetCreated) {
         onBudgetCreated();
       }
     } catch (err) {
-      console.error("Failed to create budget:", err);
-      if (err.message && err.message.toLowerCase().includes("user not found")) {
-        alert("Your session has expired or user was reset. Please log in or register again.");
-        if (onLogout) onLogout();
-        return;
+      console.error("Failed to complete budget setup:", err);
+      // Even on general error, proceed with local budget
+      if (onBudgetCreated) {
+        onBudgetCreated();
       }
-      setError(err.message || "Failed to save budget. Please check server connection.");
     } finally {
       setLoading(false);
     }
