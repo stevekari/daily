@@ -1026,6 +1026,9 @@ export default function BudgetApp({ userId, username, onLogout }) {
                 <span className="notif-badge-pill">{unreadNotifsCount}</span>
               )}
             </button>
+            <div className="mobile-theme-toggle-wrap">
+              <ThemeToggle compact />
+            </div>
             <button
               type="button"
               className="mobile-icon-btn"
@@ -1113,7 +1116,7 @@ export default function BudgetApp({ userId, username, onLogout }) {
           </div>
 
           {/* Live Clock & Top Controls */}
-          <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <div className="ba-clock" style={{ padding: "8px 16px" }}>
               <div className="ba-clock-time" style={{ fontSize: 22 }}>
                 {timeStr.split(":").map((seg, i) => (
@@ -1128,8 +1131,8 @@ export default function BudgetApp({ userId, username, onLogout }) {
               </div>
             </div>
 
-            <div style={{ minWidth: 120 }}>
-              <ThemeToggle />
+            <div className="header-theme-toggle-wrap">
+              <ThemeToggle showLabel={false} />
             </div>
 
             <button
