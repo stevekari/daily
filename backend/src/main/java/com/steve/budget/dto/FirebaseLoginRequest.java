@@ -19,3 +19,4 @@ public class FirebaseLoginRequest {
         this.idToken = idToken;
     }
 }
+

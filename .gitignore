@@ -8,3 +8,8 @@ steve-budget-app/node_modules/
 steve-budget-app/dist/
 .idea/
 .vscode/
+.env
+.env.local
+.env.*.local
+*.env
+

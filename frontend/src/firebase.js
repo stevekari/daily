@@ -1,4 +1,5 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
+import { getAnalytics, isSupported } from "firebase/analytics";
 import {
   getAuth,
   GoogleAuthProvider,
@@ -9,21 +10,22 @@ import {
   updateProfile,
 } from "firebase/auth";
 
-// Firebase Configuration from Vite Environment Variables (with demo / local fallback)
+// Firebase Configuration loaded securely from environment variables
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDummyKeyForBudgetAppConfig",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "steve-budget-app.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "steve-budget-app",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "steve-budget-app.appspot.com",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "123456789012",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:123456789012:web:abcdef1234567890",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "daily-5c591.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "daily-5c591",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "daily-5c591.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "273753089132",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:273753089132:web:0b3e5e5b67d77ee4032449",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-LWQNRB6T4H",
 };
 
 // Check if Firebase is properly configured
 export const isFirebaseConfigured = () => {
-  return (
+  return Boolean(
     import.meta.env.VITE_FIREBASE_API_KEY &&
-    import.meta.env.VITE_FIREBASE_API_KEY !== "AIzaSyDummyKeyForBudgetAppConfig"
+    import.meta.env.VITE_FIREBASE_API_KEY.length > 5
   );
 };
 
@@ -32,6 +34,18 @@ const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: "select_account" });
+
+// Initialize Analytics conditionally (supported in browser environments)
+let analytics = null;
+if (typeof window !== "undefined") {
+  isSupported()
+    .then((supported) => {
+      if (supported) {
+        analytics = getAnalytics(app);
+      }
+    })
+    .catch(() => {});
+}
 
 /**
  * Sign in with Google Popup
@@ -92,4 +106,4 @@ export async function getCurrentUserToken() {
   return null;
 }
 
-export { app, auth, googleProvider };
+export { app, auth, analytics, googleProvider };
