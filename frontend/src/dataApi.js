@@ -85,6 +85,10 @@ export function loginUser(credentials) {
   return request("/auth/login", jsonOptions("POST", credentials));
 }
 
+export function loginWithFirebase(idToken) {
+  return request("/auth/firebase", jsonOptions("POST", { idToken }));
+}
+
 export function registerUser(user) {
   return request("/auth/register", jsonOptions("POST", user));
 }

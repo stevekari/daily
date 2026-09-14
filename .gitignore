@@ -1,6 +1,6 @@
 .DS_Store
 *.log
-budget/
+/budget/
 backend/target/
 frontend/node_modules/
 frontend/dist/
