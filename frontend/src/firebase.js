@@ -30,13 +30,17 @@ export const isFirebaseConfigured = () => {
 };
 
 // Initialize Firebase App singleton
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const googleProvider = new GoogleAuthProvider();
+export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+
+// Initialize Firebase Auth
+export const auth = getAuth(app);
+
+// Initialize Google Auth Provider
+export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: "select_account" });
 
 // Initialize Analytics conditionally (supported in browser environments)
-let analytics = null;
+export let analytics = null;
 if (typeof window !== "undefined") {
   isSupported()
     .then((supported) => {
@@ -106,4 +110,4 @@ export async function getCurrentUserToken() {
   return null;
 }
 
-export { app, auth, analytics, googleProvider };
+export default app;
