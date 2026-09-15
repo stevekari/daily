@@ -40,6 +40,7 @@ import ExportReportModal from "./ExportReportModal";
 import AnimatedNumber from "./AnimatedNumber";
 import WheelDatePicker from "./WheelDatePicker";
 import PwaInstallModal, { usePwaInstall } from "./PwaInstallPrompt";
+import steveLogo from "../assets/stevebudget.png";
 
 // Safe number formatter helper
 const fmt = (num, decimals = 2) => {
@@ -1014,34 +1015,40 @@ export default function BudgetApp({ userId, username, onLogout }) {
           MAIN CONTENT AREA (Right Side)
           ════════════════════════════════════════════════════════════════════════════ */}
       <main className="main">
-        {/* Mobile Top Header */}
+        {/* Mobile Top Header (Sleek X / Facebook Style) */}
         <div className="mobile-top-bar">
+          {/* Left: User Avatar Button (Taps to open navigation drawer) */}
           <button
             type="button"
-            className="mobile-menu-btn"
+            className="mobile-avatar-btn"
             onClick={() => setMobileSidebarOpen(true)}
-            aria-label="Open menu"
+            aria-label="Open profile menu"
+            title={displayName}
           >
-            ☰
-          </button>
-          <div
-            className="mobile-profile-chip"
-            onClick={() => {
-              setSettingsName(displayName);
-              setShowSettings(true);
-            }}
-            title={t("settings") || "Profile Settings"}
-          >
-            <div className="mobile-avatar-thumb">
+            <div className="mobile-avatar-circle">
               {userAvatar ? (
                 <img src={userAvatar} alt={displayName} className="mobile-avatar-img" />
               ) : (
                 <span className="mobile-avatar-initials">{getInitials(displayName)}</span>
               )}
             </div>
-            <span className="mobile-profile-name">{displayName}</span>
+          </button>
+
+          {/* Center: Brand Logo & Title */}
+          <div
+            className="mobile-brand-center"
+            onClick={() => {
+              setCurrentView("dashboard");
+              setShowNotifications(false);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          >
+            <img src={steveLogo} alt="Steve Budget" className="mobile-brand-logo" />
+            <span className="mobile-brand-title">STEVE BUDGET</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+
+          {/* Right: Actions (Install pill if available, and Theme Toggle) */}
+          <div className="mobile-top-actions">
             {!isInstalled && (
               <button
                 type="button"
@@ -1056,46 +1063,12 @@ export default function BudgetApp({ userId, username, onLogout }) {
                 title={t("installApp") || "Install App"}
               >
                 <span>📲</span>
-                <span>Install</span>
+                <span className="mobile-install-pill-text">Install</span>
               </button>
             )}
-            <button
-              type="button"
-              className="mobile-icon-btn"
-              onClick={() => setShowNotifications(true)}
-              title={t("notifications")}
-              style={{ position: "relative" }}
-            >
-              🔔
-              {unreadNotifsCount > 0 && (
-                <span className="notif-badge-pill">{unreadNotifsCount}</span>
-              )}
-            </button>
             <div className="mobile-theme-toggle-wrap">
               <ThemeToggle compact />
             </div>
-            <button
-              type="button"
-              className="mobile-icon-btn"
-              onClick={() => {
-                setSettingsName(displayName);
-                setSettingsBudget("");
-                setSettingsDaily("");
-                setShowSettings(true);
-              }}
-              title={t("settings")}
-            >
-              ⚙️
-            </button>
-            <button
-              type="button"
-              className="mobile-icon-btn mobile-logout-btn"
-              onClick={handleLogout}
-              title={t("logout") || "Logout"}
-              aria-label={t("logout") || "Logout"}
-            >
-              🚪
-            </button>
           </div>
         </div>
 
@@ -2497,7 +2470,32 @@ export default function BudgetApp({ userId, username, onLogout }) {
           <span className="mobile-nav-label">{t("analytics") || "Analysis"}</span>
         </button>
 
-        {/* 3. Notifications Tab */}
+        {/* 3. Center Quick Add Button (Prominent Action FAB) */}
+        <button
+          type="button"
+          className="mobile-nav-fab"
+          onClick={() => {
+            setCurrentView("dashboard");
+            setShowNotifications(false);
+            setMobileSidebarOpen(false);
+            const formElem = document.querySelector(".card:has(form)");
+            if (formElem) {
+              formElem.scrollIntoView({ behavior: "smooth", block: "center" });
+              const nameInput = formElem.querySelector("input");
+              if (nameInput) nameInput.focus();
+            } else {
+              window.scrollTo({ top: 250, behavior: "smooth" });
+            }
+          }}
+          aria-label="Add Transaction"
+          title={t("addTransaction") || "Add Transaction"}
+        >
+          <div className="mobile-nav-fab-inner">
+            <span className="mobile-nav-fab-icon">＋</span>
+          </div>
+        </button>
+
+        {/* 4. Notifications Tab */}
         <button
           type="button"
           className={`mobile-nav-item ${showNotifications ? "active" : ""}`}
@@ -2512,10 +2510,10 @@ export default function BudgetApp({ userId, username, onLogout }) {
               <span className="mobile-nav-badge">{unreadNotifsCount}</span>
             )}
           </div>
-          <span className="mobile-nav-label">{t("notifications") || "Notifications"}</span>
+          <span className="mobile-nav-label">{t("notifications") || "Alerts"}</span>
         </button>
 
-        {/* 4. Menu / More Drawer Tab */}
+        {/* 5. Menu / Profile Drawer Tab */}
         <button
           type="button"
           className={`mobile-nav-item ${mobileSidebarOpen ? "active" : ""}`}
