@@ -107,8 +107,29 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Public auth routes
                         .requestMatchers("/api/auth/**").permitAll()
-                        // Public static and documentation resources
-                        .requestMatchers("/", "/index.html", "/assets/**", "/favicon.ico", "/*.png", "/*.jpg", "/*.jpeg", "/*.svg", "/*.js", "/*.css").permitAll()
+                        // Public static resources, PWA service worker, manifest, icons, and SPA assets
+                        .requestMatchers(
+                                "/",
+                                "/index.html",
+                                "/sw.js",
+                                "/manifest.webmanifest",
+                                "/manifest.json",
+                                "/favicon.svg",
+                                "/favicon.ico",
+                                "/apple-touch-icon*.png",
+                                "/icons/**",
+                                "/assets/**",
+                                "/workbox-*.js",
+                                "/*.png",
+                                "/*.jpg",
+                                "/*.jpeg",
+                                "/*.svg",
+                                "/*.js",
+                                "/*.css",
+                                "/*.webmanifest",
+                                "/*.json",
+                                "/*.ico"
+                        ).permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/health", "/api").permitAll()
                         .requestMatchers("/error").permitAll()
