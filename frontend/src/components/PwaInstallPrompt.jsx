@@ -351,10 +351,6 @@ export default function PwaInstallPrompt({ onInstalled }) {
   const handleInstallClick = async () => {
     if (isInstallable) {
       const outcome = await triggerInstall();
-      if (outcome === "accepted") {
-        if (onInstalled) onInstalled();
-        return;
-      }
     }
     // If not installable directly or on iOS, open the guide modal
     setShowModal(true);
