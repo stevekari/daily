@@ -11,7 +11,12 @@ export default defineConfig({
       includeAssets: [
         "favicon.svg",
         "favicon.ico",
+        "favicon.png",
+        "favicon-32x32.png",
+        "favicon-16x16.png",
         "apple-touch-icon.png",
+        "pwa-192x192.png",
+        "pwa-512x512.png",
         "icons/*.png",
       ],
       manifest: {
@@ -53,6 +58,12 @@ export default defineConfig({
             purpose: "maskable",
           },
           {
+            src: "/favicon.png",
+            sizes: "64x64",
+            type: "image/png",
+            purpose: "any",
+          },
+          {
             src: "/favicon.svg",
             sizes: "any",
             type: "image/svg+xml",
@@ -84,6 +95,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         globPatterns: ["**/*.{js,css,html,ico,png,svg,jpeg,jpg,webp,woff2}"],
         runtimeCaching: [
           {

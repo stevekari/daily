@@ -3,6 +3,7 @@ import { useLanguage } from "../LanguageContext";
 import { ThemeToggle } from "../ThemeContext";
 import { loginUser, registerUser, loginWithFirebase, setAuthToken } from "../dataApi";
 import { signInWithGoogle, signInWithEmail, signUpWithEmail } from "../firebase";
+import steveLogo from "../assets/stevebudget.png";
 
 /**
  * LoginRegister Component
@@ -298,7 +299,19 @@ export default function LoginRegister({ onLoginSuccess }) {
         {/* Logo & Header */}
         <div className="logo-section">
           <div className="logo-emoji">
-            🔒
+            <img
+              src={steveLogo}
+              alt="Steve Budget Logo"
+              style={{
+                width: 72,
+                height: 72,
+                borderRadius: "18px",
+                objectFit: "cover",
+                boxShadow: "0 8px 24px rgba(234, 88, 12, 0.4)",
+                border: "2px solid rgba(251, 146, 60, 0.45)",
+                display: "inline-block",
+              }}
+            />
           </div>
           <h1 className="main-title">
             STEVE BUDGET
