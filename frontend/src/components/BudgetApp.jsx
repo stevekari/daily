@@ -2458,6 +2458,78 @@ export default function BudgetApp({ userId, username, onLogout }) {
           initialTab={isIos ? "ios" : isAndroid ? "android" : "auto"}
         />
       </main>
+
+      {/* ════════════════════════════════════════════════════════════════════════════
+          MOBILE BOTTOM NAVIGATION BAR (Fixed tab bar on mobile viewports)
+          ════════════════════════════════════════════════════════════════════════════ */}
+      <nav className="mobile-bottom-nav" aria-label="Mobile Navigation">
+        {/* 1. Dashboard Tab */}
+        <button
+          type="button"
+          className={`mobile-nav-item ${currentView === "dashboard" && !showNotifications && !mobileSidebarOpen ? "active" : ""}`}
+          onClick={() => {
+            setCurrentView("dashboard");
+            setShowNotifications(false);
+            setMobileSidebarOpen(false);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        >
+          <div className="mobile-nav-icon-wrap">
+            <span className="mobile-nav-icon">📊</span>
+          </div>
+          <span className="mobile-nav-label">{t("dashboard") || "Dashboard"}</span>
+        </button>
+
+        {/* 2. Analysis Tab */}
+        <button
+          type="button"
+          className={`mobile-nav-item ${currentView === "analytics" && !showNotifications && !mobileSidebarOpen ? "active" : ""}`}
+          onClick={() => {
+            setCurrentView("analytics");
+            setShowNotifications(false);
+            setMobileSidebarOpen(false);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        >
+          <div className="mobile-nav-icon-wrap">
+            <span className="mobile-nav-icon">📈</span>
+          </div>
+          <span className="mobile-nav-label">{t("analytics") || "Analysis"}</span>
+        </button>
+
+        {/* 3. Notifications Tab */}
+        <button
+          type="button"
+          className={`mobile-nav-item ${showNotifications ? "active" : ""}`}
+          onClick={() => {
+            setShowNotifications(true);
+            setMobileSidebarOpen(false);
+          }}
+        >
+          <div className="mobile-nav-icon-wrap">
+            <span className="mobile-nav-icon">🔔</span>
+            {unreadNotifsCount > 0 && (
+              <span className="mobile-nav-badge">{unreadNotifsCount}</span>
+            )}
+          </div>
+          <span className="mobile-nav-label">{t("notifications") || "Notifications"}</span>
+        </button>
+
+        {/* 4. Menu / More Drawer Tab */}
+        <button
+          type="button"
+          className={`mobile-nav-item ${mobileSidebarOpen ? "active" : ""}`}
+          onClick={() => {
+            setShowNotifications(false);
+            setMobileSidebarOpen(true);
+          }}
+        >
+          <div className="mobile-nav-icon-wrap">
+            <span className="mobile-nav-icon">☰</span>
+          </div>
+          <span className="mobile-nav-label">{t("menu") || "Menu"}</span>
+        </button>
+      </nav>
     </div>
   );
 }
