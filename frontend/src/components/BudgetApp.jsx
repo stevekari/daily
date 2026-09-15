@@ -39,6 +39,7 @@ import MonthlyComparison from "./MonthlyComparison";
 import ExportReportModal from "./ExportReportModal";
 import AnimatedNumber from "./AnimatedNumber";
 import WheelDatePicker from "./WheelDatePicker";
+import { usePwaInstall } from "./PwaInstallPrompt";
 
 // Safe number formatter helper
 const fmt = (num, decimals = 2) => {
@@ -60,6 +61,10 @@ export default function BudgetApp({ userId, username, onLogout }) {
   const [showScanner, setShowScanner] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showExport, setShowExport] = useState(false);
+  const [showIosPwaModal, setShowIosPwaModal] = useState(false);
+
+  // PWA Install State
+  const { isInstallable, isInstalled, isIos, triggerInstall } = usePwaInstall();
 
   // User details & local budget overrides
   const [displayName, setDisplayName] = useState(() => {
@@ -963,6 +968,29 @@ export default function BudgetApp({ userId, username, onLogout }) {
 
         {/* Settings & Logout */}
         <div className="sidebar-footer">
+          {!isInstalled && (isInstallable || isIos) && (
+            <button
+              type="button"
+              className="btn-sidebar btn-install-app"
+              onClick={() => {
+                if (isIos) {
+                  setShowIosPwaModal(true);
+                } else if (isInstallable) {
+                  triggerInstall();
+                }
+                setMobileSidebarOpen(false);
+              }}
+              style={{
+                background: "linear-gradient(135deg, rgba(249, 115, 22, 0.4), rgba(234, 88, 12, 0.6))",
+                border: "1px solid rgba(249, 115, 22, 0.6)",
+                color: "#fff",
+                fontWeight: 800,
+                boxShadow: "0 2px 10px rgba(249, 115, 22, 0.25)",
+              }}
+            >
+              📲 {t("installApp") || "Install App"}
+            </button>
+          )}
           <button
             type="button"
             className="btn-sidebar btn-settings"
@@ -2405,6 +2433,58 @@ export default function BudgetApp({ userId, username, onLogout }) {
         <footer className="main-footer">
           STEVE BUDGET APPS · {new Date().getFullYear()} · PWA Ready 📱
         </footer>
+
+        {/* iOS PWA Install Instructions Modal */}
+        {showIosPwaModal && (
+          <div className="bs-modal-backdrop" onClick={() => setShowIosPwaModal(false)}>
+            <div className="bs-modal pwa-ios-modal" onClick={(e) => e.stopPropagation()}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <h3 style={{ fontSize: 20, fontWeight: 900, color: "#f97316", margin: 0 }}>
+                  📱 Install on iPhone / iPad
+                </h3>
+                <button
+                  type="button"
+                  className="modal-close-btn"
+                  onClick={() => setShowIosPwaModal(false)}
+                  aria-label="Close"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.8)", marginBottom: 18 }}>
+                Follow these two quick steps in Safari to add Steve Budget Pro to your home screen:
+              </p>
+
+              <div className="pwa-ios-steps">
+                <div className="pwa-step-item">
+                  <span className="pwa-step-num">1</span>
+                  <div>
+                    <strong>Tap the Share button</strong>
+                    <p>Tap the <strong>Share icon ( ⎋ )</strong> at the bottom or top of your Safari screen.</p>
+                  </div>
+                </div>
+
+                <div className="pwa-step-item">
+                  <span className="pwa-step-num">2</span>
+                  <div>
+                    <strong>Add to Home Screen</strong>
+                    <p>Scroll down the menu and tap <strong>'Add to Home Screen' ( ➕ )</strong>.</p>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="btn-submit"
+                style={{ width: "100%", marginTop: 20 }}
+                onClick={() => setShowIosPwaModal(false)}
+              >
+                Got it! 👍
+              </button>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

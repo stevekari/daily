@@ -5,6 +5,7 @@ import LoginRegister from "./components/LoginRegister";
 import { LanguagePicker, LanguageProvider, useLanguage } from "./LanguageContext";
 import { getUserBudgets, clearAuthSession } from "./dataApi";
 import { ThemeProvider } from "./ThemeContext";
+import PwaInstallPrompt from "./components/PwaInstallPrompt";
 
 function AppContent() {
   const { t } = useLanguage();
@@ -156,13 +157,13 @@ function AppContent() {
     />
   );
 }
-
 export default function App() {
   return (
     <LanguageProvider>
       <ThemeProvider>
         <LanguagePicker />
         <AppContent />
+        <PwaInstallPrompt />
       </ThemeProvider>
     </LanguageProvider>
   );
