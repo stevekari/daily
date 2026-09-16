@@ -25,9 +25,11 @@ export default function SettingsView({
   budgetAmount,
   dailyLimit,
   currencySymbol = "€",
+  lockPastMonths = true,
   onSaveProfile,
   onSaveBudget,
   onSaveCurrency,
+  onSaveLockPastMonths,
   onOpenImportModal,
   onOpenPwaModal,
   onDeleteAccount,
@@ -43,6 +45,7 @@ export default function SettingsView({
   const [budgetVal, setBudgetVal] = useState(String(budgetAmount || ""));
   const [dailyVal, setDailyVal] = useState(String(dailyLimit || ""));
   const [currency, setCurrency] = useState(currencySymbol || "€");
+  const [lockPast, setLockPast] = useState(lockPastMonths);
   const [startOfMonth, setStartOfMonth] = useState(() => {
     return localStorage.getItem(`budgetUser_startDay_${userId}`) || "1";
   });
@@ -67,6 +70,10 @@ export default function SettingsView({
     onSaveCurrency(currency);
 
     localStorage.setItem(`budgetUser_startDay_${userId}`, startOfMonth);
+    localStorage.setItem(`budgetUser_lockPastMonths_${userId}`, String(lockPast));
+    if (onSaveLockPastMonths) {
+      onSaveLockPastMonths(lockPast);
+    }
     setSavedSuccess("Settings updated successfully! ✓");
     setTimeout(() => setSavedSuccess(""), 3500);
   };
@@ -273,6 +280,83 @@ export default function SettingsView({
                 placeholder="e.g. 50"
               />
             </div>
+          </div>
+
+          {/* 🔒 Check & Balance Protection (Lock Past Months) */}
+          <div
+            style={{
+              background: "rgba(255, 255, 255, 0.04)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              borderRadius: 12,
+              padding: 16,
+              marginTop: 16,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 16,
+              flexWrap: "wrap",
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 16 }}>🔒</span>
+                <span style={{ fontSize: 13, fontWeight: 800 }}>
+                  {t("lockPastMonthsTitle") || "Check & Balance Protection (Lock Past Months)"}
+                </span>
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 800,
+                    padding: "2px 6px",
+                    borderRadius: 6,
+                    backgroundColor: lockPast ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)",
+                    color: lockPast ? "#6ee7b7" : "#fca5a5",
+                    border: `1px solid ${lockPast ? "rgba(16, 185, 129, 0.4)" : "rgba(239, 68, 68, 0.4)"}`,
+                  }}
+                >
+                  {lockPast ? (t("enabled") || "Enabled (Protected)") : (t("unlocked") || "Unlocked")}
+                </span>
+              </div>
+              <div style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 4, lineHeight: 1.4 }}>
+                {t("lockPastMonthsDesc") || "Freeze past closed months to prevent accidental modifications or additions. Maintains financial integrity and balances across accounting periods."}
+              </div>
+            </div>
+
+            <label style={{ position: "relative", display: "inline-block", width: 48, height: 26, flexShrink: 0 }}>
+              <input
+                type="checkbox"
+                checked={lockPast}
+                onChange={(e) => setLockPast(e.target.checked)}
+                style={{ opacity: 0, width: 0, height: 0 }}
+              />
+              <span
+                style={{
+                  position: "absolute",
+                  cursor: "pointer",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: lockPast ? "#10b981" : "rgba(255,255,255,0.2)",
+                  transition: "0.3s",
+                  borderRadius: 26,
+                }}
+              >
+                <span
+                  style={{
+                    position: "absolute",
+                    content: '""',
+                    height: 20,
+                    width: 20,
+                    left: lockPast ? 24 : 3,
+                    bottom: 3,
+                    backgroundColor: "white",
+                    transition: "0.3s",
+                    borderRadius: "50%",
+                  }}
+                />
+              </span>
+            </label>
           </div>
         </div>
 

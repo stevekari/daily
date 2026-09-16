@@ -52,6 +52,34 @@ const fmt = (num, decimals = 2) => {
   return isNaN(n) ? "0.00" : n.toFixed(decimals);
 };
 
+// Check & Balance: Helper to identify if a transaction belongs to a closed past month
+export const isClosedPastMonth = (dateStr) => {
+  if (!dateStr) return false;
+  try {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth(); // 0-11
+
+    if (typeof dateStr === "string" && /^\d{4}-\d{2}/.test(dateStr)) {
+      const parts = dateStr.slice(0, 7).split("-");
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10) - 1;
+      if (!isNaN(y) && !isNaN(m)) {
+        if (y < currentYear) return true;
+        if (y === currentYear && m < currentMonth) return true;
+        return false;
+      }
+    }
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return false;
+    const dYear = d.getFullYear();
+    const dMonth = d.getMonth();
+    return dYear < currentYear || (dYear === currentYear && dMonth < currentMonth);
+  } catch {
+    return false;
+  }
+};
+
 export default function BudgetApp({ userId, username, onLogout }) {
   const { language, t, setShowLanguagePicker } = useLanguage();
 
@@ -63,6 +91,12 @@ export default function BudgetApp({ userId, username, onLogout }) {
   const [typeFilter, setTypeFilter] = useState("ALL"); // 'ALL' | 'EXPENSE' | 'INCOME'
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
+
+  // Check & Balance Protection (Lock Past Months)
+  const [lockPastMonths, setLockPastMonths] = useState(() => {
+    const saved = localStorage.getItem(`budgetUser_lockPastMonths_${userId}`);
+    return saved === null ? true : saved !== "false";
+  });
 
   // Loading & Error states
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -539,6 +573,15 @@ export default function BudgetApp({ userId, username, onLogout }) {
       return;
     }
 
+    // Check & Balance Protection: Block adding transactions to closed past months
+    if (lockPastMonths && isClosedPastMonth(formData.date)) {
+      alert(
+        t("pastMonthLockedAlert") ||
+          "🔒 Check & Balance Protection: This month has been closed and locked. You cannot add new transactions to previous months while Check & Balance lock is active. You can adjust this in Settings if necessary."
+      );
+      return;
+    }
+
     try {
       const nowTime = new Date().toTimeString().slice(0, 8);
       const fullDateTime = formData.date ? `${formData.date}T${nowTime}` : new Date().toISOString().slice(0, 19);
@@ -569,6 +612,15 @@ export default function BudgetApp({ userId, username, onLogout }) {
   };
 
   const handleReceiptScanned = async (scannedTx) => {
+    // Check & Balance Protection: Block receipt if in closed past month
+    if (lockPastMonths && isClosedPastMonth(scannedTx.dateTime || scannedTx.date)) {
+      alert(
+        t("pastMonthLockedReceipt") ||
+          "🔒 Check & Balance Protection: Scanned receipt date belongs to a closed past month. New transactions cannot be added to closed periods."
+      );
+      return;
+    }
+
     try {
       await createTransaction({
         userId: parseInt(userId),
@@ -588,7 +640,19 @@ export default function BudgetApp({ userId, username, onLogout }) {
   const handleBatchImport = async (importedTxs) => {
     if (!Array.isArray(importedTxs) || importedTxs.length === 0) return;
     try {
-      for (const tx of importedTxs) {
+      let txsToImport = importedTxs;
+      if (lockPastMonths) {
+        const closedCount = importedTxs.filter((t) => isClosedPastMonth(t.dateTime || t.date)).length;
+        if (closedCount > 0) {
+          const skipClosed = window.confirm(
+            `🔒 Check & Balance Alert: ${closedCount} of the imported transactions belong to closed past months. Would you like to skip closed month transactions to protect historical balances? (Click OK to skip closed months, Cancel to abort import).`
+          );
+          if (!skipClosed) return;
+          txsToImport = importedTxs.filter((t) => !isClosedPastMonth(t.dateTime || t.date));
+        }
+      }
+
+      for (const tx of txsToImport) {
         await createTransaction({
           userId: parseInt(userId),
           name: tx.name || "Imported item",
@@ -607,6 +671,15 @@ export default function BudgetApp({ userId, username, onLogout }) {
   };
 
   const handleDeleteTransaction = async (id) => {
+    const targetTx = txList.find((t) => t.id === id);
+    if (lockPastMonths && targetTx && isClosedPastMonth(targetTx.dateTime || targetTx.date)) {
+      alert(
+        t("pastMonthLockedDelete") ||
+          "🔒 Check & Balance Protection: Transactions in previous closed months cannot be deleted to preserve financial audit integrity."
+      );
+      return;
+    }
+
     try {
       await deleteTransaction(id);
       loadTransactions();
@@ -617,6 +690,15 @@ export default function BudgetApp({ userId, username, onLogout }) {
 
   const handleEditTransaction = async () => {
     if (!editingTx) return;
+    if (lockPastMonths && isClosedPastMonth(editingTx.dateTime || editingTx.date)) {
+      alert(
+        t("pastMonthLockedEdit") ||
+          "🔒 Check & Balance Protection: Transactions in previous closed months cannot be modified to preserve financial audit integrity."
+      );
+      setEditingTx(null);
+      return;
+    }
+
     try {
       await updateTransaction(editingTx.id, {
         userId: parseInt(userId),
@@ -1460,6 +1542,19 @@ export default function BudgetApp({ userId, username, onLogout }) {
                   <button
                     type="button"
                     className="story-action-pill"
+                    onClick={() => setShowScanner(true)}
+                    title="Scan Price Tag or Receipt"
+                    style={{
+                      background: "linear-gradient(135deg, rgba(249, 115, 22, 0.25), rgba(234, 88, 12, 0.45))",
+                      borderColor: "rgba(249, 115, 22, 0.5)",
+                      color: "#fb923c",
+                    }}
+                  >
+                    📸 Scan Price / Tag
+                  </button>
+                  <button
+                    type="button"
+                    className="story-action-pill"
                     onClick={() => {
                       const formElem = document.querySelector(".card:has(form)");
                       if (formElem) {
@@ -1682,6 +1777,31 @@ export default function BudgetApp({ userId, username, onLogout }) {
                   </div>
                 </div>
 
+                {/* Check & Balance Warning Notice if closed past month is picked */}
+                {lockPastMonths && isClosedPastMonth(formData.date) && (
+                  <div
+                    style={{
+                      marginTop: 10,
+                      padding: "8px 12px",
+                      borderRadius: 8,
+                      backgroundColor: "rgba(239, 68, 68, 0.15)",
+                      border: "1px solid rgba(239, 68, 68, 0.35)",
+                      color: "#fca5a5",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <span style={{ fontSize: 14 }}>🔒</span>
+                    <span>
+                      {t("pastMonthLockedNotice") ||
+                        "Notice: Selected date is in a closed month. Check & Balance protection will prevent adding transactions to closed periods."}
+                    </span>
+                  </div>
+                )}
+
                 <div className="form-grid-2" style={{ marginTop: 10 }}>
                   <select
                     className="form-input"
@@ -1711,8 +1831,19 @@ export default function BudgetApp({ userId, username, onLogout }) {
                   />
                 </div>
 
-                <button type="submit" className="btn-submit" style={{ marginTop: 14 }}>
-                  {t("submit")}
+                <button
+                  type="submit"
+                  className="btn-submit"
+                  style={{
+                    marginTop: 14,
+                    ...(lockPastMonths && isClosedPastMonth(formData.date)
+                      ? { opacity: 0.6, cursor: "not-allowed" }
+                      : {}),
+                  }}
+                >
+                  {lockPastMonths && isClosedPastMonth(formData.date)
+                    ? `🔒 ${t("locked") || "Period Locked"}`
+                    : t("submit")}
                 </button>
               </form>
             </div>
@@ -2168,32 +2299,43 @@ export default function BudgetApp({ userId, username, onLogout }) {
                                       {tx.type === "EXPENSE" ? "-" : "+"}{currencySymbol}
                                       {fmt(tx.amount)}
                                     </p>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        setEditingTx({
-                                          id: tx.id,
-                                          name: tx.name,
-                                          amount: tx.amount,
-                                          type: tx.type,
-                                          category: tx.category,
-                                          description: tx.description,
-                                        })
-                                      }
-                                      className="secondary-btn"
-                                      style={{ padding: "4px 8px", fontSize: 11 }}
-                                      title={t("edit")}
-                                    >
-                                      ✏️
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDeleteTransaction(tx.id)}
-                                      className="btn-delete"
-                                      title="Delete"
-                                    >
-                                      🗑
-                                    </button>
+                                    {lockPastMonths && isClosedPastMonth(tx.dateTime || tx.date) ? (
+                                      <span
+                                        className="locked-tx-badge"
+                                        title={t("periodClosedBalanced") || "Closed & Balanced Period (Protected)"}
+                                      >
+                                        🔒 {t("locked") || "Locked"}
+                                      </span>
+                                    ) : (
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setEditingTx({
+                                              id: tx.id,
+                                              name: tx.name,
+                                              amount: tx.amount,
+                                              type: tx.type,
+                                              category: tx.category,
+                                              description: tx.description,
+                                            })
+                                          }
+                                          className="secondary-btn"
+                                          style={{ padding: "4px 8px", fontSize: 11 }}
+                                          title={t("edit")}
+                                        >
+                                          ✏️
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDeleteTransaction(tx.id)}
+                                          className="btn-delete"
+                                          title="Delete"
+                                        >
+                                          🗑
+                                        </button>
+                                      </>
+                                    )}
                                   </div>
                                 </>
                               )}
@@ -2337,32 +2479,43 @@ export default function BudgetApp({ userId, username, onLogout }) {
                           <p className="income-card-desc">💬 {tx.description}</p>
                         )}
                         <div className="income-card-actions">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setEditingTx({
-                                id: tx.id,
-                                name: tx.name,
-                                amount: tx.amount,
-                                type: tx.type,
-                                category: tx.category,
-                                description: tx.description,
-                              })
-                            }
-                            className="secondary-btn"
-                            style={{ padding: "4px 8px", fontSize: 11 }}
-                            title={t("edit")}
-                          >
-                            ✏️ {t("edit") || "Edit"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteTransaction(tx.id)}
-                            className="btn-delete"
-                            title="Delete"
-                          >
-                            🗑
-                          </button>
+                          {lockPastMonths && isClosedPastMonth(tx.dateTime || tx.date) ? (
+                            <span
+                              className="locked-tx-badge"
+                              title={t("periodClosedBalanced") || "Closed & Balanced Period (Protected)"}
+                            >
+                              🔒 {t("locked") || "Locked"}
+                            </span>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setEditingTx({
+                                    id: tx.id,
+                                    name: tx.name,
+                                    amount: tx.amount,
+                                    type: tx.type,
+                                    category: tx.category,
+                                    description: tx.description,
+                                  })
+                                }
+                                className="secondary-btn"
+                                style={{ padding: "4px 8px", fontSize: 11 }}
+                                title={t("edit")}
+                              >
+                                ✏️ {t("edit") || "Edit"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteTransaction(tx.id)}
+                                className="btn-delete"
+                                title="Delete"
+                              >
+                                🗑
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -2535,32 +2688,43 @@ export default function BudgetApp({ userId, username, onLogout }) {
                           <p className="income-card-desc">💬 {tx.description}</p>
                         )}
                         <div className="income-card-actions">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setEditingTx({
-                                id: tx.id,
-                                name: tx.name,
-                                amount: tx.amount,
-                                type: tx.type,
-                                category: tx.category,
-                                description: tx.description,
-                              })
-                            }
-                            className="secondary-btn"
-                            style={{ padding: "4px 8px", fontSize: 11 }}
-                            title={t("edit")}
-                          >
-                            ✏️ {t("edit") || "Edit"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteTransaction(tx.id)}
-                            className="btn-delete"
-                            title="Delete"
-                          >
-                            🗑
-                          </button>
+                          {lockPastMonths && isClosedPastMonth(tx.dateTime || tx.date) ? (
+                            <span
+                              className="locked-tx-badge"
+                              title={t("periodClosedBalanced") || "Closed & Balanced Period (Protected)"}
+                            >
+                              🔒 {t("locked") || "Locked"}
+                            </span>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setEditingTx({
+                                    id: tx.id,
+                                    name: tx.name,
+                                    amount: tx.amount,
+                                    type: tx.type,
+                                    category: tx.category,
+                                    description: tx.description,
+                                  })
+                                }
+                                className="secondary-btn"
+                                style={{ padding: "4px 8px", fontSize: 11 }}
+                                title={t("edit")}
+                              >
+                                ✏️ {t("edit") || "Edit"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteTransaction(tx.id)}
+                                className="btn-delete"
+                                title="Delete"
+                              >
+                                🗑
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -2663,6 +2827,8 @@ export default function BudgetApp({ userId, username, onLogout }) {
               setCurrencySymbol(sym);
               localStorage.setItem(`budgetUser_currency_${userId}`, sym);
             }}
+            lockPastMonths={lockPastMonths}
+            onSaveLockPastMonths={(val) => setLockPastMonths(val)}
             onOpenImportModal={() => setShowImportModal(true)}
             onOpenPwaModal={() => setShowPwaModal(true)}
             onDeleteAccount={handleDeleteAccount}

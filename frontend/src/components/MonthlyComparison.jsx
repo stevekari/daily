@@ -15,6 +15,7 @@ export default function MonthlyComparison({
 }) {
   const { t } = useLanguage();
   const currentActualYear = new Date().getFullYear();
+  const currentActualMonth = new Date().getMonth();
   const [selectedYear, setSelectedYear] = useState(currentActualYear);
   const [selectedMonthIndex, setSelectedMonthIndex] = useState(null);
   const [appliedNotice, setAppliedNotice] = useState(false);
@@ -420,6 +421,22 @@ export default function MonthlyComparison({
                 <span className="month-end-grade-tag" style={{ color: selectedMonth.gradeColor }}>
                   Grade {selectedMonth.grade}
                 </span>
+                {(selectedYear < currentActualYear || (selectedYear === currentActualYear && selectedMonthIndex < currentActualMonth)) && (
+                  <span
+                    className="period-status-chip period-status-chip--closed"
+                    title="This accounting period is closed and locked for check & balance integrity"
+                  >
+                    🔒 {t("periodClosedBalanced") || "Closed & Balanced Period"}
+                  </span>
+                )}
+                {selectedYear === currentActualYear && selectedMonthIndex === currentActualMonth && (
+                  <span
+                    className="period-status-chip period-status-chip--active"
+                    title="This is the active open period"
+                  >
+                    🟢 {t("currentActivePeriod") || "Current Active Period"}
+                  </span>
+                )}
               </div>
               <div className="month-end-score-pill">
                 <span>⭐ {selectedMonth.ratingScore > 0 ? selectedMonth.ratingScore.toFixed(1) : "0.0"} / 5.0</span>
@@ -530,7 +547,24 @@ export default function MonthlyComparison({
                   onClick={() => setSelectedMonthIndex(selectedMonthIndex === idx ? null : idx)}
                 >
                   <td>
-                    <strong>{m.monthFull}</strong>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <strong>{m.monthFull}</strong>
+                      {selectedYear < currentActualYear || (selectedYear === currentActualYear && idx < currentActualMonth) ? (
+                        <span
+                          title={t("periodClosedBalanced") || "Closed Period (Locked)"}
+                          style={{ fontSize: 11, opacity: 0.7 }}
+                        >
+                          🔒
+                        </span>
+                      ) : selectedYear === currentActualYear && idx === currentActualMonth ? (
+                        <span
+                          title={t("currentActivePeriod") || "Active Period"}
+                          style={{ fontSize: 10, color: "#4ade80" }}
+                        >
+                          🟢
+                        </span>
+                      ) : null}
+                    </div>
                   </td>
                   <td className="spent-col">
                     <strong>€{m.totalExpense.toFixed(2)}</strong>
