@@ -83,17 +83,39 @@ export default function LoginRegister({ onLoginSuccess }) {
 
     try {
       const { idToken, user } = await signInWithGoogle();
-      if (!idToken) {
+      if (!idToken || !user) {
         throw new Error("No Firebase token received");
+      }
+
+      const googleEmail = user.email || "";
+      const googleDisplayName = user.displayName || "";
+      const googlePhoto = user.photoURL || "";
+
+      let firstName = "";
+      let lastName = "";
+      if (googleDisplayName) {
+        const parts = googleDisplayName.trim().split(/\s+/);
+        firstName = parts[0] || "";
+        if (parts.length > 1) {
+          lastName = parts.slice(1).join(" ");
+        }
+      }
+
+      let candidateUsername = "";
+      if (googleEmail.includes("@")) {
+        candidateUsername = googleEmail.split("@")[0].replace(/[^a-zA-Z0-9_.]/g, "").toLowerCase();
+      } else if (firstName) {
+        candidateUsername = firstName.toLowerCase().replace(/[^a-zA-Z0-9_.]/g, "");
       }
 
       // 1. Attempt verification with Spring Boot backend
       try {
         const data = await loginWithFirebase(idToken);
         if (data && data.success) {
+          // User is ALREADY REGISTERED -> Log them in directly!
           setSuccess(t("loginSuccessful") || "Login successful! Redirecting...");
           localStorage.setItem("userId", data.userId);
-          localStorage.setItem("username", data.username || user.displayName || user.email?.split("@")[0] || "User");
+          localStorage.setItem("username", data.username || googleDisplayName || candidateUsername || "User");
           if (data.token) {
             setAuthToken(data.token);
           }
@@ -101,26 +123,74 @@ export default function LoginRegister({ onLoginSuccess }) {
             localStorage.setItem(`budgetUser_name_${data.userId}`, user.displayName);
           }
           if (user.photoURL) {
-            localStorage.setItem(`budgetUser_photo_${data.userId}`, user.photoURL);
+            localStorage.setItem(`budgetUser_avatar_${data.userId}`, user.photoURL);
+          }
+          if (googleEmail) {
+            localStorage.setItem(`budgetUser_registered_${googleEmail.toLowerCase()}`, "true");
           }
           setTimeout(() => onLoginSuccess(data.userId), 600);
           return;
+        } else if (data && (data.message === "USER_NOT_REGISTERED" || !data.success)) {
+          // User is NOT REGISTERED in database -> Redirect to Register page with prefilled info!
+          setMode("register");
+          setRegisterForm((prev) => ({
+            ...prev,
+            username: data.username || candidateUsername || prev.username,
+            email: data.email || googleEmail || prev.email,
+            firstName: data.firstName || firstName || prev.firstName,
+            lastName: data.lastName || lastName || prev.lastName,
+            password: "",
+            confirmPassword: "",
+          }));
+          if (googlePhoto) {
+            localStorage.setItem("budgetUser_temp_avatar", googlePhoto);
+          }
+          setError("");
+          setSuccess(
+            `👋 Welcome! We found your Google account (${googleEmail || googleDisplayName}). Please choose a password and monthly budget below to finish creating your account.`
+          );
+          return;
         }
       } catch (backendErr) {
-        console.warn("Backend Firebase auth verification fallback:", backendErr);
-        // Fallback to client session if backend is in standalone/offline mode
-        const localUserId = user.uid.substring(0, 16);
-        const displayName = user.displayName || user.email?.split("@")[0] || "User";
-        localStorage.setItem("userId", localUserId);
-        localStorage.setItem("username", displayName);
-        if (user.displayName) {
-          localStorage.setItem(`budgetUser_name_${localUserId}`, user.displayName);
+        console.warn("Backend Firebase auth verification notice:", backendErr);
+        // Fallback / Standalone mode:
+        // Check if user was registered locally
+        const registeredKey = `budgetUser_registered_${googleEmail.toLowerCase() || user.uid}`;
+        const isLocallyRegistered = localStorage.getItem(registeredKey);
+
+        if (isLocallyRegistered) {
+          const localUserId = user.uid.substring(0, 16);
+          const displayName = user.displayName || user.email?.split("@")[0] || "User";
+          localStorage.setItem("userId", localUserId);
+          localStorage.setItem("username", displayName);
+          if (user.displayName) {
+            localStorage.setItem(`budgetUser_name_${localUserId}`, user.displayName);
+          }
+          if (user.photoURL) {
+            localStorage.setItem(`budgetUser_avatar_${localUserId}`, user.photoURL);
+          }
+          setSuccess(t("loginSuccessful") || "Login successful! Redirecting...");
+          setTimeout(() => onLoginSuccess(localUserId), 600);
+        } else {
+          // Account not registered yet -> Direct to Register page with prefilled info!
+          setMode("register");
+          setRegisterForm((prev) => ({
+            ...prev,
+            username: candidateUsername || prev.username,
+            email: googleEmail || prev.email,
+            firstName: firstName || prev.firstName,
+            lastName: lastName || prev.lastName,
+            password: "",
+            confirmPassword: "",
+          }));
+          if (googlePhoto) {
+            localStorage.setItem("budgetUser_temp_avatar", googlePhoto);
+          }
+          setError("");
+          setSuccess(
+            `👋 Welcome! We found your Google account (${googleEmail || googleDisplayName}). Please choose a password and monthly budget below to finish creating your account.`
+          );
         }
-        if (user.photoURL) {
-          localStorage.setItem(`budgetUser_photo_${localUserId}`, user.photoURL);
-        }
-        setSuccess(t("loginSuccessful") || "Login successful! Redirecting...");
-        setTimeout(() => onLoginSuccess(localUserId), 600);
       }
     } catch (err) {
       if (err.code === "auth/operation-not-allowed") {
@@ -184,10 +254,56 @@ export default function LoginRegister({ onLoginSuccess }) {
         }
         setTimeout(() => onLoginSuccess(data.userId), 800);
       } else {
-        setError(data.message || "Login failed");
+        // If account is not registered, redirect to register page with user info
+        if (
+          data.message === "USER_NOT_FOUND" ||
+          data.message?.includes("USER_NOT_FOUND") ||
+          data.message?.toLowerCase().includes("user not found") ||
+          data.message?.toLowerCase().includes("no account found")
+        ) {
+          const rawInput = loginForm.username.trim();
+          const isEmail = rawInput.includes("@");
+          setMode("register");
+          setRegisterForm((prev) => ({
+            ...prev,
+            username: data.username || (isEmail ? rawInput.split("@")[0] : rawInput),
+            email: data.email || (isEmail ? rawInput : prev.email),
+            password: loginForm.password,
+            confirmPassword: loginForm.password,
+          }));
+          setError("");
+          setSuccess(
+            "ℹ️ No account found with this username/email. We've filled in your info — please review and create your account below!"
+          );
+        } else {
+          setError(data.message || "Login failed");
+        }
       }
     } catch (err) {
-      setError(err.message || "Error connecting to server");
+      // Check if error message indicates user not found
+      const errMsg = err.message || "";
+      if (
+        errMsg.includes("USER_NOT_FOUND") ||
+        errMsg.toLowerCase().includes("user not found") ||
+        errMsg.toLowerCase().includes("no account")
+      ) {
+        const rawInput = loginForm.username.trim();
+        const isEmail = rawInput.includes("@");
+        setMode("register");
+        setRegisterForm((prev) => ({
+          ...prev,
+          username: isEmail ? rawInput.split("@")[0] : rawInput,
+          email: isEmail ? rawInput : prev.email,
+          password: loginForm.password,
+          confirmPassword: loginForm.password,
+        }));
+        setError("");
+        setSuccess(
+          "ℹ️ No account found with this username/email. We've filled in your info — please review and create your account below!"
+        );
+      } else {
+        setError(errMsg || "Error connecting to server");
+      }
     } finally {
       setLoading(false);
     }
@@ -240,6 +356,10 @@ export default function LoginRegister({ onLoginSuccess }) {
           setAuthToken(data.token);
         }
 
+        if (registerForm.email) {
+          localStorage.setItem(`budgetUser_registered_${registerForm.email.toLowerCase()}`, "true");
+        }
+
         // Store budget directly for this user if provided
         if (registerForm.monthlyBudget && parseFloat(registerForm.monthlyBudget) > 0) {
           const budgetVal = String(parseFloat(registerForm.monthlyBudget));
@@ -250,6 +370,13 @@ export default function LoginRegister({ onLoginSuccess }) {
         if (registerForm.firstName) {
           const fullName = `${registerForm.firstName} ${registerForm.lastName || ""}`.trim();
           localStorage.setItem(`budgetUser_name_${userId}`, fullName || username);
+        }
+
+        // Apply temporary avatar from Google if one was staged
+        const stagedAvatar = localStorage.getItem("budgetUser_temp_avatar");
+        if (stagedAvatar) {
+          localStorage.setItem(`budgetUser_avatar_${userId}`, stagedAvatar);
+          localStorage.removeItem("budgetUser_temp_avatar");
         }
 
         setSuccess(t("registerSuccessfulHome") || "Account created successfully! Welcome, taking you straight home...");

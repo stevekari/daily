@@ -67,30 +67,25 @@ public class AuthService {
             userOpt = userRepository.findByUsername("fb_" + uid);
         }
 
-        User user;
         if (userOpt.isPresent()) {
-            user = userOpt.get();
+            User user = userOpt.get();
+            UserPrincipal principal = UserPrincipal.build(user);
+            String token = jwtUtils.generateToken(principal);
+
+            return new AuthResponse(
+                    true,
+                    "Firebase authentication successful",
+                    token,
+                    user.getId(),
+                    user.getUsername(),
+                    user.getEmail(),
+                    user.getFirstName(),
+                    user.getLastName()
+            );
         } else {
-            // Auto-provision new User from Firebase account
-            String username;
-            if (email != null && email.contains("@")) {
-                String candidate = email.substring(0, email.indexOf("@")).replaceAll("[^a-zA-Z0-9_.]", "");
-                if (candidate.length() < 3) {
-                    candidate = "user_" + uid.substring(0, Math.min(8, uid.length()));
-                }
-                if (userRepository.existsByUsername(candidate)) {
-                    username = candidate + "_" + uid.substring(0, Math.min(4, uid.length()));
-                } else {
-                    username = candidate;
-                }
-            } else {
-                username = "fb_" + uid.substring(0, Math.min(12, uid.length()));
-            }
-
-            String finalEmail = (email != null && !email.isEmpty()) ? email : (username + "@firebase.user");
-
-            String firstName = null;
-            String lastName = null;
+            // Account is NOT registered in database yet
+            String firstName = "";
+            String lastName = "";
             if (userInfo.getName() != null && !userInfo.getName().isBlank()) {
                 String[] parts = userInfo.getName().trim().split("\\s+", 2);
                 firstName = parts[0];
@@ -99,32 +94,24 @@ public class AuthService {
                 }
             }
 
-            // Secure random password
-            String randomPass = passwordEncoder.encode(UUID.randomUUID().toString() + "_" + uid);
+            String candidateUsername = "";
+            if (email != null && email.contains("@")) {
+                candidateUsername = email.substring(0, email.indexOf("@")).replaceAll("[^a-zA-Z0-9_.]", "");
+            } else if (!firstName.isEmpty()) {
+                candidateUsername = firstName.toLowerCase().replaceAll("[^a-z0-9_.]", "");
+            }
 
-            User newUser = new User(
-                    username,
-                    finalEmail,
-                    randomPass,
+            return new AuthResponse(
+                    false,
+                    "USER_NOT_REGISTERED",
+                    null,
+                    null,
+                    candidateUsername,
+                    email,
                     firstName,
                     lastName
             );
-            user = userRepository.save(newUser);
         }
-
-        UserPrincipal principal = UserPrincipal.build(user);
-        String token = jwtUtils.generateToken(principal);
-
-        return new AuthResponse(
-                true,
-                "Firebase authentication successful",
-                token,
-                user.getId(),
-                user.getUsername(),
-                user.getEmail(),
-                user.getFirstName(),
-                user.getLastName()
-        );
     }
 
     public AuthResponse register(RegisterRequest req) {
@@ -208,10 +195,20 @@ public class AuthService {
         }
 
         Optional<User> userOpt = userRepository.findByUsername(username);
+        if (userOpt.isEmpty() && username.contains("@")) {
+            userOpt = userRepository.findByEmail(username.toLowerCase());
+        }
 
         if (userOpt.isEmpty()) {
             loginAttemptService.loginFailed(username);
-            return new AuthResponse(false, getInvalidCredentialsMessage(username));
+            AuthResponse notFoundResp = new AuthResponse(false, "USER_NOT_FOUND");
+            if (username.contains("@")) {
+                notFoundResp.setEmail(username.toLowerCase());
+                notFoundResp.setUsername(username.substring(0, username.indexOf("@")));
+            } else {
+                notFoundResp.setUsername(username);
+            }
+            return notFoundResp;
         }
 
         User user = userOpt.get();

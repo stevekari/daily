@@ -8,6 +8,7 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   updateProfile,
+  sendPasswordResetEmail,
 } from "firebase/auth";
 
 // Default configuration with safe fallback defaults for production deployment (e.g. Render / Vercel)
@@ -124,6 +125,52 @@ export async function signUpWithEmail(email, password, displayName) {
   }
   const idToken = await user.getIdToken();
   return { user, idToken };
+}
+
+/**
+ * Send password reset email
+ */
+export async function sendPasswordReset(email) {
+  if (!auth) {
+    throw new Error("Firebase Auth is not initialized.");
+  }
+  if (!email || !email.includes("@")) {
+    throw new Error("Please provide a valid email address.");
+  }
+  await sendPasswordResetEmail(auth, email);
+  return true;
+}
+
+/**
+ * Formats Firebase auth error codes into friendly user messages
+ */
+export function formatAuthError(error) {
+  if (!error) return "An unexpected error occurred. Please try again.";
+  const msg = error.message || String(error);
+  const code = error.code || "";
+
+  if (code === "auth/user-not-found" || msg.includes("user-not-found")) {
+    return "No account found with this email. Please register first.";
+  }
+  if (code === "auth/wrong-password" || msg.includes("wrong-password") || code === "auth/invalid-credential") {
+    return "Incorrect password. Please verify your password and try again.";
+  }
+  if (code === "auth/email-already-in-use" || msg.includes("email-already-in-use")) {
+    return "An account with this email already exists. Try logging in instead.";
+  }
+  if (code === "auth/weak-password" || msg.includes("weak-password")) {
+    return "Password is too weak. Please choose at least 6 characters.";
+  }
+  if (code === "auth/invalid-email" || msg.includes("invalid-email")) {
+    return "Please enter a valid email address.";
+  }
+  if (code === "auth/popup-closed-by-user" || msg.includes("popup-closed-by-user")) {
+    return "Sign-in popup was closed before completing.";
+  }
+  if (code === "auth/network-request-failed" || msg.includes("network-request-failed")) {
+    return "Network connection issue. Please check your internet connection.";
+  }
+  return msg;
 }
 
 /**
