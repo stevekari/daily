@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { useLanguage } from "../LanguageContext";
 import { useTheme, ThemeToggle } from "../ThemeContext";
-import { sendPasswordReset } from "../firebase";
+import {
+  sendPasswordReset,
+  initRecaptchaVerifier,
+  sendPhoneVerificationSms,
+  confirmPhoneOtp,
+  sendPhoneSmsAlert,
+} from "../firebase";
 import { exportBackupJSON, exportTransactionsToCSV, printFinancialReport } from "../utils/exportUtils";
 
 export const CURRENCY_OPTIONS = [
@@ -15,6 +21,40 @@ export const CURRENCY_OPTIONS = [
   { symbol: "zł", name: "PLN (zł) - Polish Zloty" },
   { symbol: "₹", name: "INR (₹) - Indian Rupee" },
   { symbol: "R$", name: "BRL (R$) - Brazilian Real" },
+];
+
+export const COUNTRY_DIAL_CODES = [
+  { code: "+34", flag: "🇪🇸", name: "Spain (+34)" },
+  { code: "+1", flag: "🇺🇸", name: "United States / Canada (+1)" },
+  { code: "+44", flag: "🇬🇧", name: "United Kingdom (+44)" },
+  { code: "+33", flag: "🇫🇷", name: "France (+33)" },
+  { code: "+49", flag: "🇩🇪", name: "Germany (+49)" },
+  { code: "+351", flag: "🇵🇹", name: "Portugal (+351)" },
+  { code: "+39", flag: "🇮🇹", name: "Italy (+39)" },
+  { code: "+233", flag: "🇬🇭", name: "Ghana (+233)" },
+  { code: "+234", flag: "🇳🇬", name: "Nigeria (+234)" },
+  { code: "+91", flag: "🇮🇳", name: "India (+91)" },
+  { code: "+61", flag: "🇦🇺", name: "Australia (+61)" },
+  { code: "+31", flag: "🇳🇱", name: "Netherlands (+31)" },
+  { code: "+32", flag: "🇧🇪", name: "Belgium (+32)" },
+  { code: "+41", flag: "🇨🇭", name: "Switzerland (+41)" },
+  { code: "+46", flag: "🇸🇪", name: "Sweden (+46)" },
+  { code: "+47", flag: "🇳🇴", name: "Norway (+47)" },
+  { code: "+45", flag: "🇩🇰", name: "Denmark (+45)" },
+  { code: "+353", flag: "🇮🇪", name: "Ireland (+353)" },
+  { code: "+43", flag: "🇦🇹", name: "Austria (+43)" },
+  { code: "+48", flag: "🇵🇱", name: "Poland (+48)" },
+  { code: "+55", flag: "🇧🇷", name: "Brazil (+55)" },
+  { code: "+52", flag: "🇲🇽", name: "Mexico (+52)" },
+  { code: "+27", flag: "🇿🇦", name: "South Africa (+27)" },
+  { code: "+254", flag: "🇰🇪", name: "Kenya (+254)" },
+  { code: "+81", flag: "🇯🇵", name: "Japan (+81)" },
+  { code: "+82", flag: "🇰🇷", name: "South Korea (+82)" },
+  { code: "+86", flag: "🇨🇳", name: "China (+86)" },
+  { code: "+971", flag: "🇦🇪", name: "UAE (+971)" },
+  { code: "+966", flag: "🇸🇦", name: "Saudi Arabia (+966)" },
+  { code: "+65", flag: "🇸🇬", name: "Singapore (+65)" },
+  { code: "+64", flag: "🇳🇿", name: "New Zealand (+64)" },
 ];
 
 export default function SettingsView({
@@ -49,6 +89,37 @@ export default function SettingsView({
   const [startOfMonth, setStartOfMonth] = useState(() => {
     return localStorage.getItem(`budgetUser_startDay_${userId}`) || "1";
   });
+
+  // Phone SMS overspending notification state (Optional - post registration)
+  const storedFullPhone = typeof window !== "undefined" ? localStorage.getItem(`budgetUser_phone_${userId}`) || "" : "";
+  
+  const parseStoredPhone = (fullPhone) => {
+    if (!fullPhone) return { countryCode: "+34", rawPhone: "" };
+    const matched = COUNTRY_DIAL_CODES.find((c) => fullPhone.startsWith(c.code));
+    if (matched) {
+      return { countryCode: matched.code, rawPhone: fullPhone.slice(matched.code.length) };
+    }
+    return { countryCode: "+34", rawPhone: fullPhone.replace(/^\+/, "") };
+  };
+
+  const initialParsed = parseStoredPhone(storedFullPhone);
+  const [selectedCountryCode, setSelectedCountryCode] = useState(() => {
+    return localStorage.getItem(`budgetUser_country_code_${userId}`) || initialParsed.countryCode;
+  });
+  const [rawPhone, setRawPhone] = useState(initialParsed.rawPhone);
+  const [isPhoneVerified, setIsPhoneVerified] = useState(() => localStorage.getItem(`budgetUser_phone_verified_${userId}`) === "true");
+  const [smsAlertsEnabled, setSmsAlertsEnabled] = useState(() => localStorage.getItem(`budgetUser_phone_sms_enabled_${userId}`) !== "false");
+  const [phoneStep, setPhoneStep] = useState("idle"); // 'idle' | 'code_sent' | 'editing'
+  const [otpCode, setOtpCode] = useState("");
+  const [confirmationResult, setConfirmationResult] = useState(null);
+  const [phoneLoading, setPhoneLoading] = useState(false);
+  const [phoneError, setPhoneError] = useState("");
+  const [phoneSuccessMsg, setPhoneSuccessMsg] = useState("");
+  const [testSmsLoading, setTestSmsLoading] = useState(false);
+  const [testSmsSuccessMsg, setTestSmsSuccessMsg] = useState("");
+
+  const cleanDigits = rawPhone.replace(/\D/g, "").replace(/^0+/, "");
+  const formattedFullPhone = cleanDigits ? `${selectedCountryCode}${cleanDigits}` : "";
 
   const [passwordEmail, setPasswordEmail] = useState("");
   const [resetSuccess, setResetSuccess] = useState("");
@@ -93,6 +164,97 @@ export default function SettingsView({
       alert(err.message || "Failed to send reset email.");
     } finally {
       setResetLoading(false);
+    }
+  };
+
+  const handleSendCode = async () => {
+    setPhoneError("");
+    setPhoneSuccessMsg("");
+    if (!cleanDigits || cleanDigits.length < 5) {
+      setPhoneError(t("invalidPhoneNumber") || "Please enter a valid phone number (at least 5 digits).");
+      return;
+    }
+    setPhoneLoading(true);
+    try {
+      const verifier = initRecaptchaVerifier("recaptcha-container");
+      const result = await sendPhoneVerificationSms(formattedFullPhone, verifier);
+      setConfirmationResult(result);
+      setPhoneStep("code_sent");
+      setPhoneSuccessMsg(`Verification code sent via SMS to ${formattedFullPhone}! Please enter the 6 digits.`);
+    } catch (err) {
+      console.error("Phone verification SMS error:", err);
+      setPhoneError(err.message || "Failed to send verification SMS. Please verify your phone number format.");
+    } finally {
+      setPhoneLoading(false);
+    }
+  };
+
+  const handleConfirmCode = async () => {
+    setPhoneError("");
+    setPhoneSuccessMsg("");
+    if (!otpCode || otpCode.trim().length < 6) {
+      setPhoneError("Please enter the 6-digit code received via SMS.");
+      return;
+    }
+    setPhoneLoading(true);
+    try {
+      await confirmPhoneOtp(confirmationResult, otpCode.trim());
+      setIsPhoneVerified(true);
+      setPhoneStep("idle");
+      setOtpCode("");
+      localStorage.setItem(`budgetUser_phone_${userId}`, formattedFullPhone);
+      localStorage.setItem(`budgetUser_country_code_${userId}`, selectedCountryCode);
+      localStorage.setItem(`budgetUser_phone_verified_${userId}`, "true");
+      localStorage.setItem(`budgetUser_phone_sms_enabled_${userId}`, "true");
+      setSmsAlertsEnabled(true);
+      setPhoneSuccessMsg(t("phoneConnectedSuccess") || "Phone number verified and SMS alerts activated! ✓");
+      setTimeout(() => setPhoneSuccessMsg(""), 4000);
+    } catch (err) {
+      console.error("OTP confirmation error:", err);
+      setPhoneError(err.message || "Invalid or expired verification code. Please try again.");
+    } finally {
+      setPhoneLoading(false);
+    }
+  };
+
+  const handleDisconnectPhone = () => {
+    if (window.confirm("Are you sure you want to disconnect this phone number? You will no longer receive SMS overspending alerts.")) {
+      setIsPhoneVerified(false);
+      setRawPhone("");
+      setPhoneStep("idle");
+      setOtpCode("");
+      localStorage.removeItem(`budgetUser_phone_${userId}`);
+      localStorage.removeItem(`budgetUser_country_code_${userId}`);
+      localStorage.removeItem(`budgetUser_phone_verified_${userId}`);
+      localStorage.removeItem(`budgetUser_phone_sms_enabled_${userId}`);
+      setPhoneSuccessMsg(t("phoneDisconnectedSuccess") || "Phone number disconnected.");
+      setTimeout(() => setPhoneSuccessMsg(""), 3500);
+    }
+  };
+
+  const handleToggleSmsAlerts = (enabled) => {
+    setSmsAlertsEnabled(enabled);
+    localStorage.setItem(`budgetUser_phone_sms_enabled_${userId}`, String(enabled));
+  };
+
+  const handleSendTestSms = async () => {
+    setPhoneError("");
+    setTestSmsSuccessMsg("");
+    setTestSmsLoading(true);
+    try {
+      const currentDaily = parseFloat(dailyVal) || dailyLimit || 50;
+      const targetPhone = storedFullPhone || formattedFullPhone;
+      await sendPhoneSmsAlert({
+        phoneNumber: targetPhone,
+        title: "Steve Budget Daily Limit Alert 🚨",
+        message: `[TEST ALERT] Steve Budget: You've exceeded your daily spending limit of ${currency}${currentDaily}. Check your dashboard for actionable anti-overspending advice.`,
+      });
+      setTestSmsSuccessMsg(t("testSmsSuccess") || "Test SMS alert sent successfully to your phone! ✓");
+      setTimeout(() => setTestSmsSuccessMsg(""), 4500);
+    } catch (err) {
+      setPhoneError(err.message || "Failed to send test SMS.");
+    } finally {
+      setTestSmsLoading(false);
     }
   };
 
@@ -360,7 +522,363 @@ export default function SettingsView({
           </div>
         </div>
 
-        {/* ── 3. APP & PREFERENCES SECTION ─────────────────────────── */}
+        {/* ── 3. PHONE & SMS DAILY OVERSPENDING ALERTS (OPTIONAL POST-REGISTRATION) ── */}
+        <div className="card settings-card" style={{ padding: 22 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
+            <div>
+              <h3 style={{ fontSize: 13, fontWeight: 900, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1.5, margin: 0 }}>
+                📱 {t("phoneNotificationsTitle") || "Phone & SMS Daily Overspending Alerts"}
+              </h3>
+              <p style={{ fontSize: 12, color: "#94a3b8", margin: "4px 0 0" }}>
+                {t("phoneNotificationsSubtitle") || "Get instant SMS text alerts when your daily spending exceeds your set daily limit."}
+              </p>
+            </div>
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 800,
+                padding: "3px 8px",
+                borderRadius: 6,
+                backgroundColor: isPhoneVerified ? "rgba(16, 185, 129, 0.15)" : "rgba(249, 115, 22, 0.15)",
+                color: isPhoneVerified ? "#10b981" : "#f97316",
+                border: `1px solid ${isPhoneVerified ? "rgba(16, 185, 129, 0.3)" : "rgba(249, 115, 22, 0.3)"}`,
+                textTransform: "uppercase",
+                letterSpacing: 0.5,
+              }}
+            >
+              {isPhoneVerified ? `✓ ${t("phoneVerifiedBadge") || "Verified & Active"}` : "Optional Feature"}
+            </span>
+          </div>
+
+          {/* Feedback messages */}
+          {phoneSuccessMsg && (
+            <div style={{
+              background: "rgba(16, 185, 129, 0.15)",
+              border: "1px solid #10b981",
+              color: "#6ee7b7",
+              padding: "10px 14px",
+              borderRadius: 10,
+              fontWeight: 700,
+              fontSize: 12,
+              marginBottom: 14,
+            }}>
+              ✓ {phoneSuccessMsg}
+            </div>
+          )}
+
+          {phoneError && (
+            <div style={{
+              background: "rgba(239, 68, 68, 0.15)",
+              border: "1px solid #ef4444",
+              color: "#fca5a5",
+              padding: "10px 14px",
+              borderRadius: 10,
+              fontWeight: 700,
+              fontSize: 12,
+              marginBottom: 14,
+            }}>
+              ⚠️ {phoneError}
+            </div>
+          )}
+
+          {testSmsSuccessMsg && (
+            <div style={{
+              background: "rgba(59, 130, 246, 0.15)",
+              border: "1px solid #3b82f6",
+              color: "#93c5fd",
+              padding: "10px 14px",
+              borderRadius: 10,
+              fontWeight: 700,
+              fontSize: 12,
+              marginBottom: 14,
+            }}>
+              📱 {testSmsSuccessMsg}
+            </div>
+          )}
+
+          {/* If phone is already verified */}
+          {isPhoneVerified && phoneStep !== "editing" ? (
+            <div>
+              <div
+                style={{
+                  background: "rgba(255, 255, 255, 0.04)",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                  borderRadius: 12,
+                  padding: 16,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: 14,
+                  marginBottom: 16,
+                }}
+              >
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 18 }}>📱</span>
+                    <span style={{ fontSize: 15, fontWeight: 900, letterSpacing: 0.5, color: "#fff" }}>
+                      {storedFullPhone || formattedFullPhone}
+                    </span>
+                    <span style={{ fontSize: 11, background: "rgba(16, 185, 129, 0.2)", color: "#6ee7b7", padding: "2px 8px", borderRadius: 12, fontWeight: 800 }}>
+                      ✓ Verified
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 4 }}>
+                    Linked for daily spending threshold notifications ({currency}{dailyVal || dailyLimit}/day limit)
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    type="button"
+                    className="secondary-btn"
+                    onClick={() => setPhoneStep("editing")}
+                    style={{ fontSize: 11, fontWeight: 800, padding: "6px 12px" }}
+                  >
+                    ✏️ {t("changePhone") || "Change Number"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDisconnectPhone}
+                    style={{
+                      background: "rgba(239, 68, 68, 0.15)",
+                      border: "1px solid rgba(239, 68, 68, 0.3)",
+                      color: "#fca5a5",
+                      borderRadius: 8,
+                      padding: "6px 12px",
+                      fontSize: 11,
+                      fontWeight: 800,
+                      cursor: "pointer",
+                    }}
+                  >
+                    🗑️ {t("disconnectPhone") || "Disconnect"}
+                  </button>
+                </div>
+              </div>
+
+              {/* SMS Alert Toggle */}
+              <div
+                style={{
+                  background: "rgba(255, 255, 255, 0.04)",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                  borderRadius: 12,
+                  padding: 16,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 16,
+                  flexWrap: "wrap",
+                  marginBottom: 16,
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 220 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 15 }}>🔔</span>
+                    <span style={{ fontSize: 13, fontWeight: 800 }}>
+                      {t("enableSmsOverspendAlerts") || "Send SMS Alerts when Daily Limit is Exceeded"}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 800,
+                        padding: "2px 6px",
+                        borderRadius: 6,
+                        backgroundColor: smsAlertsEnabled ? "rgba(16, 185, 129, 0.2)" : "rgba(148, 163, 184, 0.2)",
+                        color: smsAlertsEnabled ? "#6ee7b7" : "#94a3b8",
+                      }}
+                    >
+                      {smsAlertsEnabled ? "Active" : "Paused"}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 4, lineHeight: 1.4 }}>
+                    {t("enableSmsAlertsSub") || "Automatically sends an SMS message if your daily expenses go over your daily limit."}
+                  </div>
+                </div>
+
+                <label style={{ position: "relative", display: "inline-block", width: 48, height: 26, flexShrink: 0 }}>
+                  <input
+                    type="checkbox"
+                    checked={smsAlertsEnabled}
+                    onChange={(e) => handleToggleSmsAlerts(e.target.checked)}
+                    style={{ opacity: 0, width: 0, height: 0 }}
+                  />
+                  <span
+                    style={{
+                      position: "absolute",
+                      cursor: "pointer",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: smsAlertsEnabled ? "#f97316" : "rgba(255,255,255,0.2)",
+                      transition: "0.3s",
+                      borderRadius: 26,
+                    }}
+                  >
+                    <span
+                      style={{
+                        position: "absolute",
+                        content: '""',
+                        height: 20,
+                        width: 20,
+                        left: smsAlertsEnabled ? 24 : 3,
+                        bottom: 3,
+                        backgroundColor: "white",
+                        transition: "0.3s",
+                        borderRadius: "50%",
+                      }}
+                    />
+                  </span>
+                </label>
+              </div>
+
+              {/* Test SMS Button */}
+              <div style={{ display: "flex", justifyContent: "flex-start" }}>
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  onClick={handleSendTestSms}
+                  disabled={testSmsLoading}
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 800,
+                    padding: "8px 16px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <span>📲</span>
+                  <span>{testSmsLoading ? "Sending Test SMS..." : (t("sendTestSms") || "Send Test SMS Alert")}</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Enter Phone / Verify OTP flow with Country Code Picker */
+            <div>
+              <div className="form-group" style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: "#94a3b8", marginBottom: 6, display: "block" }}>
+                  {t("phoneNumberLabel") || "Phone Number & Country Code"}
+                </label>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                  {/* Country Dial Code Dropdown */}
+                  <div style={{ minWidth: 160, flex: "0 1 180px" }}>
+                    <select
+                      className="bs-form-input"
+                      style={{ padding: "10px 12px", fontSize: 13, fontWeight: 700, cursor: "pointer", width: "100%" }}
+                      value={selectedCountryCode}
+                      onChange={(e) => setSelectedCountryCode(e.target.value)}
+                      disabled={phoneLoading || phoneStep === "code_sent"}
+                    >
+                      {COUNTRY_DIAL_CODES.map((c) => (
+                        <option key={c.name} value={c.code}>
+                          {c.flag} {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Local Number Input (User only types the digits) */}
+                  <div style={{ flex: 1, minWidth: 160 }}>
+                    <input
+                      className="bs-form-input"
+                      style={{ width: "100%", fontSize: 14, fontWeight: 700, letterSpacing: 0.5 }}
+                      type="tel"
+                      placeholder={t("phoneNumberPlaceholder") || "e.g. 612 345 678"}
+                      value={rawPhone}
+                      onChange={(e) => setRawPhone(e.target.value)}
+                      disabled={phoneLoading || phoneStep === "code_sent"}
+                    />
+                  </div>
+
+                  {phoneStep !== "code_sent" ? (
+                    <button
+                      type="button"
+                      className="secondary-btn"
+                      onClick={handleSendCode}
+                      disabled={phoneLoading || !cleanDigits}
+                      style={{ fontSize: 12, fontWeight: 800, padding: "10px 16px", whiteSpace: "nowrap" }}
+                    >
+                      {phoneLoading ? (t("sendingCode") || "Sending Code...") : `📲 ${t("sendVerificationCode") || "Send Verification Code"}`}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="secondary-btn"
+                      onClick={() => { setPhoneStep("idle"); setOtpCode(""); }}
+                      style={{ fontSize: 12, fontWeight: 800, padding: "10px 14px" }}
+                    >
+                      ✏️ Edit
+                    </button>
+                  )}
+                </div>
+
+                {/* Live formatted international dial preview */}
+                {cleanDigits && (
+                  <div style={{ marginTop: 8, fontSize: 12, color: "#94a3b8", display: "flex", alignItems: "center", gap: 6 }}>
+                    <span>🌐 {t("fullNumberPreview") || "International Dial Format"}:</span>
+                    <span style={{ color: "#38bdf8", fontWeight: 800, fontFamily: "monospace", fontSize: 13 }}>
+                      {formattedFullPhone}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Invisible reCAPTCHA container required for Firebase Phone Auth */}
+              <div id="recaptcha-container" style={{ margin: "4px 0" }}></div>
+
+              {/* Step 2: Enter 6-digit OTP code */}
+              {phoneStep === "code_sent" && (
+                <div
+                  style={{
+                    background: "rgba(249, 115, 22, 0.08)",
+                    border: "1px solid rgba(249, 115, 22, 0.3)",
+                    borderRadius: 12,
+                    padding: 16,
+                    marginTop: 12,
+                  }}
+                >
+                  <label style={{ fontSize: 12, fontWeight: 800, color: "#f97316", marginBottom: 8, display: "block" }}>
+                    💬 {t("enterSmsCode") || "Enter 6-Digit SMS Code sent to"} {formattedFullPhone}
+                  </label>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <input
+                      className="bs-form-input"
+                      style={{ flex: 1, minWidth: 160, letterSpacing: 4, fontSize: 16, fontWeight: 800, textAlign: "center" }}
+                      maxLength={6}
+                      placeholder="• • • • • •"
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                    />
+                    <button
+                      type="button"
+                      className="btn-submit"
+                      onClick={handleConfirmCode}
+                      disabled={phoneLoading || otpCode.length < 6}
+                      style={{ margin: 0, padding: "10px 18px", fontSize: 12, fontWeight: 900 }}
+                    >
+                      {phoneLoading ? (t("verifyingCode") || "Verifying...") : `✓ ${t("verifyAndSavePhone") || "Verify & Activate Phone"}`}
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary-btn"
+                      onClick={handleSendCode}
+                      disabled={phoneLoading}
+                      style={{ fontSize: 11, padding: "8px 12px" }}
+                    >
+                      🔄 Resend SMS
+                    </button>
+                  </div>
+                  <p style={{ fontSize: 11, color: "#94a3b8", margin: "8px 0 0" }}>
+                    💡 Standard SMS rates may apply. You can disconnect or pause alerts anytime in Settings.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── 4. APP & PREFERENCES SECTION ─────────────────────────── */}
         <div className="card settings-card" style={{ padding: 22 }}>
           <h3 style={{ fontSize: 13, fontWeight: 900, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 16 }}>
             📱 App & Preferences

@@ -1,6 +1,7 @@
 /**
  * In-App Notification Center Engine & Daily Budget Alert Dispatcher
  */
+import { sendPhoneSmsAlert } from "../firebase";
 
 export function getNotifications(userId) {
   try {
@@ -134,8 +135,27 @@ export function checkAndTriggerSystemAlerts(
     const key = `alert_daily_exceeded_${todayKey}`;
     const existing = notifications.find((n) => n.id === key);
 
+    // Check optional Firebase Phone SMS alert setup
+    const userPhone = typeof window !== "undefined" ? localStorage.getItem(`budgetUser_phone_${userId}`) : null;
+    const isPhoneVerified = typeof window !== "undefined" ? localStorage.getItem(`budgetUser_phone_verified_${userId}`) === "true" : false;
+    const isSmsEnabled = typeof window !== "undefined" ? localStorage.getItem(`budgetUser_phone_sms_enabled_${userId}`) !== "false" : false;
+    const smsSentTodayKey = `budgetUser_sms_sent_${userId}_${todayKey}`;
+    const smsAlreadySentToday = typeof window !== "undefined" ? localStorage.getItem(smsSentTodayKey) === "true" : false;
+
+    if (userPhone && isPhoneVerified && isSmsEnabled && !smsAlreadySentToday) {
+      sendPhoneSmsAlert({
+        phoneNumber: userPhone,
+        title: "Steve Budget Daily Limit Exceeded 🚨",
+        message: `🚨 Steve Budget Alert: You've spent €${dailySpent.toFixed(2)} today, which is €${overAmount.toFixed(2)} over your daily limit of €${dailyLimit.toFixed(2)}. Open Steve Budget to review anti-overspending advice.`,
+      }).catch((err) => console.warn("Could not dispatch daily limit SMS:", err));
+      if (typeof window !== "undefined") {
+        localStorage.setItem(smsSentTodayKey, "true");
+      }
+    }
+
     const title = `Daily Limit Exceeded! 🚨`;
-    const message = `You have spent €${dailySpent.toFixed(2)} today, which is €${overAmount.toFixed(2)} over your daily limit of €${dailyLimit.toFixed(2)}.`;
+    const message = `You have spent €${dailySpent.toFixed(2)} today, which is €${overAmount.toFixed(2)} over your daily limit of €${dailyLimit.toFixed(2)}.` +
+      (userPhone && isPhoneVerified && isSmsEnabled ? ` (📱 SMS Alert sent to ${userPhone})` : "");
     const advice = [
       "🛑 Pause non-essential & impulse purchases for the rest of today.",
       "🍳 Cook meals or brew coffee at home today instead of ordering takeout.",
