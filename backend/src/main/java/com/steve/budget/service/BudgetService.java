@@ -103,11 +103,15 @@ public class BudgetService {
 	}
 
 	/**
-	 * Get budget summary with spending totals and remaining amount.
+	 * Get budget summary with spending totals, remaining amount, and ownership check.
 	 */
-	public BudgetSummaryDTO getBudgetSummary(Long budgetId) {
+	public BudgetSummaryDTO getBudgetSummary(Long budgetId, Long currentUserId) {
 		Budget budget = budgetRepository.findById(budgetId)
 				.orElseThrow(() -> new RuntimeException("Budget not found with ID: " + budgetId));
+
+		if (currentUserId != null && budget.getUser() != null && !budget.getUser().getId().equals(currentUserId)) {
+			throw new SecurityException("Access denied: you do not own this budget");
+		}
 
 		Long userId = budget.getUser().getId();
 		LocalDateTime dayStart = LocalDate.now().atStartOfDay();
@@ -150,14 +154,22 @@ public class BudgetService {
 		return summary;
 	}
 
+	public BudgetSummaryDTO getBudgetSummary(Long budgetId) {
+		return getBudgetSummary(budgetId, null);
+	}
+
 	// ── UPDATE ──────────────────────────────────────────────────────────
 
 	/**
-	 * Update an existing budget.
+	 * Update an existing budget with ownership check.
 	 */
-	public Budget updateBudget(Long budgetId, Budget updatedBudget) {
+	public Budget updateBudget(Long budgetId, Budget updatedBudget, Long currentUserId) {
 		Budget budget = budgetRepository.findById(budgetId)
 				.orElseThrow(() -> new RuntimeException("Budget not found with ID: " + budgetId));
+
+		if (currentUserId != null && budget.getUser() != null && !budget.getUser().getId().equals(currentUserId)) {
+			throw new SecurityException("Access denied: you do not own this budget");
+		}
 
 		if (updatedBudget.getName() != null && !updatedBudget.getName().isBlank()) {
 			budget.setName(updatedBudget.getName());
@@ -180,15 +192,28 @@ public class BudgetService {
 		return budgetRepository.save(budget);
 	}
 
+	public Budget updateBudget(Long budgetId, Budget updatedBudget) {
+		return updateBudget(budgetId, updatedBudget, null);
+	}
+
 	// ── DELETE ──────────────────────────────────────────────────────────
 
 	/**
-	 * Delete a budget.
+	 * Delete a budget with ownership check.
 	 */
-	public void deleteBudget(Long budgetId) {
+	public void deleteBudget(Long budgetId, Long currentUserId) {
 		Budget budget = budgetRepository.findById(budgetId)
 				.orElseThrow(() -> new RuntimeException("Budget not found with ID: " + budgetId));
+
+		if (currentUserId != null && budget.getUser() != null && !budget.getUser().getId().equals(currentUserId)) {
+			throw new SecurityException("Access denied: you do not own this budget");
+		}
+
 		budgetRepository.deleteById(budgetId);
+	}
+
+	public void deleteBudget(Long budgetId) {
+		deleteBudget(budgetId, null);
 	}
 
 	// ── HELPERS ─────────────────────────────────────────────────────────

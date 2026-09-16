@@ -93,6 +93,18 @@ export function registerUser(user) {
   return request("/auth/register", jsonOptions("POST", user));
 }
 
+export function requestPasswordResetCode(email) {
+  return request("/auth/forgot-password", jsonOptions("POST", { email }));
+}
+
+export function verifyResetCode(email, code) {
+  return request("/auth/verify-reset-code", jsonOptions("POST", { email, code }));
+}
+
+export function resetPasswordWithCode({ email, code, newPassword, confirmPassword }) {
+  return request("/auth/reset-password", jsonOptions("POST", { email, code, newPassword, confirmPassword }));
+}
+
 export function getUserBudgets(userId) {
   return request(`/budget/user/${userId}`);
 }

@@ -33,8 +33,11 @@ public class SecurityConfig {
     private final FirebaseTokenVerifier firebaseTokenVerifier;
     private final com.steve.budget.repository.UserRepository userRepository;
 
-    @Value("${app.cors.allowed-origins:*}")
+    @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:3000,http://localhost:8080,https://*.onrender.com,https://*.vercel.app,https://*.web.app,https://*.firebaseapp.com}")
     private String allowedOrigins;
+
+    @Value("${spring.h2.console.enabled:false}")
+    private boolean h2ConsoleEnabled;
 
     @Autowired
     public SecurityConfig(CustomUserDetailsService userDetailsService,
@@ -82,7 +85,11 @@ public class SecurityConfig {
         if (allowedOrigins == null || allowedOrigins.isBlank() || "*".equals(allowedOrigins.trim())) {
             configuration.addAllowedOriginPattern("*");
         } else {
-            configuration.setAllowedOriginPatterns(Arrays.asList(allowedOrigins.split(",")));
+            List<String> origins = Arrays.stream(allowedOrigins.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .toList();
+            configuration.setAllowedOriginPatterns(origins);
         }
 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
@@ -104,9 +111,9 @@ public class SecurityConfig {
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(authenticationEntryPoint()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
-                .authorizeHttpRequests(auth -> auth
-                        // Public auth routes
-                        .requestMatchers("/api/auth/**").permitAll()
+                .authorizeHttpRequests(auth -> {
+                    // Public auth routes
+                    auth.requestMatchers("/api/auth/**").permitAll()
                         // Public static resources, PWA service worker, manifest, icons, and SPA assets
                         .requestMatchers(
                                 "/",
@@ -130,14 +137,19 @@ public class SecurityConfig {
                                 "/*.json",
                                 "/*.ico"
                         ).permitAll()
-                        .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/health", "/api").permitAll()
-                        .requestMatchers("/error").permitAll()
-                        // Protected API routes
-                        .requestMatchers("/api/budget/**").authenticated()
+                        .requestMatchers("/error").permitAll();
+
+                    // Only permit H2 console if explicitly enabled
+                    if (h2ConsoleEnabled) {
+                        auth.requestMatchers("/h2-console/**").permitAll();
+                    }
+
+                    // Protected API routes
+                    auth.requestMatchers("/api/budget/**").authenticated()
                         .requestMatchers("/api/transactions/**").authenticated()
-                        .anyRequest().authenticated()
-                );
+                        .anyRequest().authenticated();
+                });
 
         http.authenticationProvider(authenticationProvider());
         http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);

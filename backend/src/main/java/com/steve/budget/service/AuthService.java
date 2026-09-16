@@ -83,7 +83,7 @@ public class AuthService {
                     user.getLastName()
             );
         } else {
-            // Account is NOT registered in database yet
+            // Auto-provision new Google / Firebase user for direct frictionless login
             String firstName = "";
             String lastName = "";
             if (userInfo.getName() != null && !userInfo.getName().isBlank()) {
@@ -94,22 +94,48 @@ public class AuthService {
                 }
             }
 
-            String candidateUsername = "";
+            String baseUsername = "";
             if (email != null && email.contains("@")) {
-                candidateUsername = email.substring(0, email.indexOf("@")).replaceAll("[^a-zA-Z0-9_.]", "");
+                baseUsername = email.substring(0, email.indexOf("@")).replaceAll("[^a-zA-Z0-9_.]", "");
             } else if (!firstName.isEmpty()) {
-                candidateUsername = firstName.toLowerCase().replaceAll("[^a-z0-9_.]", "");
+                baseUsername = firstName.toLowerCase().replaceAll("[^a-z0-9_.]", "");
+            }
+            if (baseUsername.isBlank()) {
+                baseUsername = "user_" + uid.substring(0, Math.min(uid.length(), 6));
             }
 
-            return new AuthResponse(
-                    false,
-                    "USER_NOT_REGISTERED",
-                    null,
-                    null,
-                    candidateUsername,
-                    email,
+            // Ensure username uniqueness
+            String finalUsername = baseUsername;
+            int counter = 1;
+            while (userRepository.existsByUsername(finalUsername)) {
+                finalUsername = baseUsername + counter;
+                counter++;
+            }
+
+            String userEmail = email != null ? email : (finalUsername + "@firebase.user");
+            String randomSecurePassword = UUID.randomUUID().toString() + "!" + (counter * 7);
+
+            User newUser = new User(
+                    finalUsername,
+                    userEmail,
+                    passwordEncoder.encode(randomSecurePassword),
                     firstName,
                     lastName
+            );
+
+            User saved = userRepository.save(newUser);
+            UserPrincipal principal = UserPrincipal.build(saved);
+            String token = jwtUtils.generateToken(principal);
+
+            return new AuthResponse(
+                    true,
+                    "Firebase user auto-provisioned and logged in successfully",
+                    token,
+                    saved.getId(),
+                    saved.getUsername(),
+                    saved.getEmail(),
+                    saved.getFirstName(),
+                    saved.getLastName()
             );
         }
     }

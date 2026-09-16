@@ -373,3 +373,179 @@
   width: min(100%, 180px);
   margin: 18px auto 0;
 }
+
+/* ── Forgot Password & Reset Wizard Styles ─────────────────────── */
+.auth-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  margin-bottom: 6px;
+}
+
+.auth-label-row .auth-label {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.forgot-pwd-link {
+  background: transparent;
+  border: none;
+  color: #fb923c;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s ease;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.forgot-pwd-link:hover {
+  color: #fdba74;
+  text-shadow: 0 0 8px rgba(251, 146, 60, 0.4);
+}
+
+.forgot-password-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.forgot-header-badge {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(249, 115, 22, 0.12);
+  border: 1px solid rgba(249, 115, 22, 0.35);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+}
+
+.forgot-badge-icon {
+  font-size: 26px;
+  flex-shrink: 0;
+}
+
+.forgot-title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.forgot-subtitle {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.code-otp-input {
+  letter-spacing: 8px !important;
+  text-align: center !important;
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  font-family: monospace, sans-serif !important;
+  background: rgba(0, 0, 0, 0.4) !important;
+  border: 2px solid rgba(249, 115, 22, 0.5) !important;
+  color: #fb923c !important;
+}
+
+.code-otp-input:focus {
+  border-color: #f97316 !important;
+  box-shadow: 0 0 16px rgba(249, 115, 22, 0.4) !important;
+}
+
+.code-input-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.resend-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.email-hint-chip {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 4px 8px;
+  border-radius: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 170px;
+}
+
+.resend-btn {
+  background: rgba(249, 115, 22, 0.15);
+  border: 1px solid rgba(249, 115, 22, 0.4);
+  color: #fb923c;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.resend-btn:hover:not(:disabled) {
+  background: rgba(249, 115, 22, 0.3);
+  transform: translateY(-1px);
+}
+
+.resend-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  border-color: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.firebase-reset-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 10px;
+}
+
+.firebase-link-btn {
+  background: transparent;
+  border: none;
+  color: #38bdf8;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.firebase-link-btn:hover {
+  color: #7dd3fc;
+}
+
+.change-email-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 6px;
+  margin-top: 4px;
+  text-align: center;
+  transition: color 0.2s;
+}
+
+.change-email-btn:hover {
+  color: #fff;
+}

@@ -60,11 +60,15 @@ public class TransactionService {
     }
 
     /**
-     * Update an existing transaction
+     * Update an existing transaction with ownership check
      */
-    public TransactionDTO updateTransaction(Long id, TransactionDTO dto) {
+    public TransactionDTO updateTransaction(Long id, TransactionDTO dto, Long currentUserId) {
         Transaction transaction = transactionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Transaction not found with ID: " + id));
+
+        if (currentUserId != null && transaction.getUser() != null && !transaction.getUser().getId().equals(currentUserId)) {
+            throw new SecurityException("Access denied: you do not own this transaction");
+        }
 
         if (dto.getName() != null && !dto.getName().isBlank()) {
             transaction.setName(dto.getName());
@@ -87,6 +91,10 @@ public class TransactionService {
 
         Transaction updated = transactionRepository.save(transaction);
         return toDTO(updated);
+    }
+
+    public TransactionDTO updateTransaction(Long id, TransactionDTO dto) {
+        return updateTransaction(id, dto, null);
     }
 
     /**
@@ -199,8 +207,19 @@ public class TransactionService {
     // DELETE
     // ════════════════════════════════════════════════════════════════════════════
 
-    public void deleteTransaction(Long id) {
+    public void deleteTransaction(Long id, Long currentUserId) {
+        Transaction transaction = transactionRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Transaction not found with ID: " + id));
+
+        if (currentUserId != null && transaction.getUser() != null && !transaction.getUser().getId().equals(currentUserId)) {
+            throw new SecurityException("Access denied: you do not own this transaction");
+        }
+
         transactionRepository.deleteById(id);
+    }
+
+    public void deleteTransaction(Long id) {
+        deleteTransaction(id, null);
     }
 
     // ════════════════════════════════════════════════════════════════════════════

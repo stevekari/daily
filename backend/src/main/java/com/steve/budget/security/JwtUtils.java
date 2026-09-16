@@ -20,27 +20,46 @@ public class JwtUtils {
 
     private static final Logger logger = LoggerFactory.getLogger(JwtUtils.class);
 
-    @Value("${app.jwt.secret}")
+    @Value("${app.jwt.secret:}")
     private String jwtSecret;
 
     @Value("${app.jwt.expiration-ms:604800000}")
     private long jwtExpirationMs;
 
-    private SecretKey getSigningKey() {
-        byte[] keyBytes;
-        try {
-            // Try decoding as Base64/Hex first if formatted
-            keyBytes = Decoders.BASE64.decode(jwtSecret);
-        } catch (Exception e) {
-            keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
+    @Value("${spring.profiles.active:default}")
+    private String activeProfile;
+
+    private SecretKey cachedSigningKey;
+
+    private synchronized SecretKey getSigningKey() {
+        if (cachedSigningKey != null) {
+            return cachedSigningKey;
         }
-        if (keyBytes.length < 32) {
-            // Ensure minimum 256 bits (32 bytes) for HMAC-SHA256
-            byte[] padded = new byte[32];
-            System.arraycopy(keyBytes, 0, padded, 0, Math.min(keyBytes.length, 32));
-            keyBytes = padded;
+
+        if (jwtSecret != null && !jwtSecret.isBlank()) {
+            byte[] keyBytes;
+            try {
+                // Try decoding as Base64 first if formatted
+                keyBytes = Decoders.BASE64.decode(jwtSecret.trim());
+            } catch (Exception e) {
+                keyBytes = jwtSecret.trim().getBytes(StandardCharsets.UTF_8);
+            }
+            if (keyBytes.length < 32) {
+                // Pad to 256 bits if user supplied shorter string
+                byte[] padded = new byte[32];
+                System.arraycopy(keyBytes, 0, padded, 0, Math.min(keyBytes.length, 32));
+                keyBytes = padded;
+            }
+            cachedSigningKey = Keys.hmacShaKeyFor(keyBytes);
+        } else {
+            if ("prod".equalsIgnoreCase(activeProfile) || "production".equalsIgnoreCase(activeProfile)) {
+                throw new IllegalStateException("FATAL: JWT_SECRET environment variable must be set in production mode!");
+            }
+            logger.warn("⚠️ No JWT_SECRET specified in environment. Generated an in-memory 512-bit signing key for this session. (Set JWT_SECRET in production on Render).");
+            cachedSigningKey = Jwts.SIG.HS512.key().build();
         }
-        return Keys.hmacShaKeyFor(keyBytes);
+
+        return cachedSigningKey;
     }
 
     public String generateToken(UserPrincipal userPrincipal) {

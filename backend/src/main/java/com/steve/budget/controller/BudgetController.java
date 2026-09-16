@@ -95,20 +95,21 @@ public class BudgetController {
 
     /**
      * GET /api/budget/{budgetId}/summary
-     * Get budget summary with spending totals and remaining amount.
+     * Get budget summary with spending totals and remaining amount (enforces ownership).
      */
     @GetMapping("/{budgetId}/summary")
     public ResponseEntity<?> getBudgetSummary(
             @PathVariable Long budgetId,
             @AuthenticationPrincipal UserPrincipal principal) {
         
-        BudgetSummaryDTO summary = budgetService.getBudgetSummary(budgetId);
+        Long currentUserId = principal != null ? principal.getId() : null;
+        BudgetSummaryDTO summary = budgetService.getBudgetSummary(budgetId, currentUserId);
         return ResponseEntity.ok(summary);
     }
 
     /**
      * PUT /api/budget/{budgetId}
-     * Update an existing budget.
+     * Update an existing budget (enforces ownership).
      */
     @PutMapping("/{budgetId}")
     public ResponseEntity<Budget> updateBudget(
@@ -116,20 +117,22 @@ public class BudgetController {
             @RequestBody Budget updatedBudget,
             @AuthenticationPrincipal UserPrincipal principal) {
         
-        Budget result = budgetService.updateBudget(budgetId, updatedBudget);
+        Long currentUserId = principal != null ? principal.getId() : null;
+        Budget result = budgetService.updateBudget(budgetId, updatedBudget, currentUserId);
         return ResponseEntity.ok(result);
     }
 
     /**
      * DELETE /api/budget/{budgetId}
-     * Delete a budget.
+     * Delete a budget (enforces ownership).
      */
     @DeleteMapping("/{budgetId}")
     public ResponseEntity<Void> deleteBudget(
             @PathVariable Long budgetId,
             @AuthenticationPrincipal UserPrincipal principal) {
         
-        budgetService.deleteBudget(budgetId);
+        Long currentUserId = principal != null ? principal.getId() : null;
+        budgetService.deleteBudget(budgetId, currentUserId);
         return ResponseEntity.noContent().build();
     }
 }

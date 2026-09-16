@@ -98,7 +98,7 @@ public class TransactionController {
 
     /**
      * PUT /api/transactions/{id}
-     * Update an existing transaction
+     * Update an existing transaction (enforces ownership)
      */
     @PutMapping("/{id}")
     public ResponseEntity<TransactionDTO> updateTransaction(
@@ -106,13 +106,14 @@ public class TransactionController {
             @RequestBody TransactionDTO dto,
             @AuthenticationPrincipal UserPrincipal principal) {
         
-        TransactionDTO updated = transactionService.updateTransaction(id, dto);
+        Long currentUserId = principal != null ? principal.getId() : null;
+        TransactionDTO updated = transactionService.updateTransaction(id, dto, currentUserId);
         return ResponseEntity.ok(updated);
     }
 
     /**
      * PATCH /api/transactions/{id}
-     * Partially update an existing transaction
+     * Partially update an existing transaction (enforces ownership)
      */
     @PatchMapping("/{id}")
     public ResponseEntity<TransactionDTO> patchTransaction(
@@ -120,20 +121,22 @@ public class TransactionController {
             @RequestBody TransactionDTO dto,
             @AuthenticationPrincipal UserPrincipal principal) {
         
-        TransactionDTO updated = transactionService.updateTransaction(id, dto);
+        Long currentUserId = principal != null ? principal.getId() : null;
+        TransactionDTO updated = transactionService.updateTransaction(id, dto, currentUserId);
         return ResponseEntity.ok(updated);
     }
 
     /**
      * DELETE /api/transactions/{id}
-     * Delete a transaction
+     * Delete a transaction (enforces ownership)
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteTransaction(
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal principal) {
         
-        transactionService.deleteTransaction(id);
+        Long currentUserId = principal != null ? principal.getId() : null;
+        transactionService.deleteTransaction(id, currentUserId);
         return ResponseEntity.noContent().build();
     }
 
