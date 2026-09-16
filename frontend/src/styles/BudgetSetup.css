@@ -5482,18 +5482,28 @@ select.form-input,
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  padding-bottom: 6px;
+  overflow-y: hidden;
+  padding-bottom: 4px;
   margin-bottom: 20px;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  -webkit-overflow-scrolling: touch;
+  /* iOS Smooth Scrolling */
+  scroll-behavior: smooth;
 }
 
 .main-nav-tabs-bar::-webkit-scrollbar {
-  height: 4px;
+  display: none;
+  width: 0;
+  height: 0;
 }
 
-.main-nav-tabs-bar::-webkit-scrollbar-thumb {
-  background: rgba(249, 115, 22, 0.4);
-  border-radius: 4px;
+@media (max-width: 900px) {
+  .main-nav-tabs-bar {
+    display: none !important;
+  }
 }
 
 .nav-tab-btn {
