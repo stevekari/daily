@@ -1,16 +1,39 @@
-# React + Vite
+# 💻 Steve Budget Pro - Frontend Client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is the React 19 + Vite Progressive Web Application (PWA) client for **Steve Budget Pro**.
 
-Currently, two official plugins are available:
+For full documentation, architecture diagrams, backend API references, and deployment guides, please see the [Root README](../README.md).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+## 🛠️ Quick Commands
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+# Install dependencies
+npm install
 
-## Expanding the ESLint configuration
+# Start local development server with HMR (Hot Module Replacement)
+npm run dev
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+# Build production bundle with PWA service worker
+npm run build
+
+# Preview production build locally
+npm run preview
+
+# Run ESLint check
+npm run lint
+
+
+```
+
+---
+
+## 📁 Key Directories
+
+- `src/components/` — UI components (Dashboard, AnalyticsCharts, SpendingCalendar, BudgetCoach, ReceiptScannerModal, SavingsGoals, SettingsView, etc.)
+- `src/styles/` — Stylesheets with theme variables and responsive layout designs
+- `src/utils/` — Client-side helpers (exportUtils, notificationEngine, receiptParser, dateFormatting)
+- `src/firebase.js` — Firebase Auth, Google Popup, ReCAPTCHA & Phone SMS OTP integration
+- `src/LanguageContext.jsx` — Multi-language localization (EN, ES, FR, PT)
+- `src/ThemeContext.jsx` — Dark and Light theme engine

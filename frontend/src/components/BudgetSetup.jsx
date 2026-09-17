@@ -193,7 +193,7 @@ export default function BudgetSetup({ userId, username, onBudgetCreated, onLogou
             type="number"
             min="1"
             step="1"
-            placeholder="e.g. 1500"
+            placeholder={t("budgetExample") || "e.g. 1500"}
             value={monthlyBudget}
             onChange={(e) => handleMonthlyChange(e.target.value)}
             required

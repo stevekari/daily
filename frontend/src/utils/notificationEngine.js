@@ -98,6 +98,21 @@ export function deleteNotification(userId, notifId) {
   return updated;
 }
 
+export function updateNotification(userId, notifId, updates = {}) {
+  const current = getNotifications(userId);
+  const updated = current.map((n) => (n.id === notifId ? { ...n, ...updates } : n));
+  saveNotifications(userId, updated);
+  return updated;
+}
+
+export function deleteMultipleNotifications(userId, notifIds = []) {
+  const idSet = new Set(notifIds);
+  const current = getNotifications(userId);
+  const updated = current.filter((n) => !idSet.has(n.id));
+  saveNotifications(userId, updated);
+  return updated;
+}
+
 export function clearAllNotifications(userId) {
   saveNotifications(userId, []);
   return [];

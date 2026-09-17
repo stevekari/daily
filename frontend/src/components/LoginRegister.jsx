@@ -314,6 +314,11 @@ export default function LoginRegister({ onLoginSuccess }) {
     setLoading(true);
 
     try {
+      const enteredBudget =
+        registerForm.monthlyBudget && parseFloat(registerForm.monthlyBudget) > 0
+          ? parseFloat(registerForm.monthlyBudget)
+          : null;
+
       const data = await registerUser({
         username: registerForm.username.trim(),
         email: registerForm.email.trim(),
@@ -321,6 +326,7 @@ export default function LoginRegister({ onLoginSuccess }) {
         confirmPassword: registerForm.confirmPassword,
         firstName: registerForm.firstName?.trim() || "",
         lastName: registerForm.lastName?.trim() || "",
+        monthlyBudget: enteredBudget || undefined,
       });
 
       if (data.success) {
@@ -337,9 +343,14 @@ export default function LoginRegister({ onLoginSuccess }) {
           localStorage.setItem(`budgetUser_registered_${registerForm.email.toLowerCase()}`, "true");
         }
 
-        if (registerForm.monthlyBudget && parseFloat(registerForm.monthlyBudget) > 0) {
-          const budgetVal = String(parseFloat(registerForm.monthlyBudget));
+        if (enteredBudget) {
+          const budgetVal = String(enteredBudget);
           localStorage.setItem(`budgetUser_budget_${userId}`, budgetVal);
+          const dailyVal = String(Math.round(enteredBudget / 30) || 50);
+          localStorage.setItem(`budgetUser_daily_${userId}`, dailyVal);
+        } else {
+          localStorage.removeItem(`budgetUser_budget_${userId}`);
+          localStorage.removeItem(`budgetUser_daily_${userId}`);
         }
 
         if (registerForm.firstName) {

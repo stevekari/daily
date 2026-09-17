@@ -20,6 +20,7 @@ export default function ReceiptScannerModal({
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState(null);
   const [facingMode, setFacingMode] = useState("environment"); // "environment" | "user"
+  const [orientation, setOrientation] = useState("portrait"); // "portrait" | "landscape"
   const [hasTorch, setHasTorch] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
 
@@ -54,11 +55,13 @@ export default function ReceiptScannerModal({
     }
 
     try {
+      const isPortrait = orientation === "portrait";
       const constraints = {
         video: {
           facingMode: { ideal: facingMode },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
+          width: { ideal: isPortrait ? 1080 : 1920 },
+          height: { ideal: isPortrait ? 1920 : 1080 },
+          aspectRatio: { ideal: isPortrait ? 9 / 16 : 16 / 9 },
         },
       };
 
@@ -85,7 +88,7 @@ export default function ReceiptScannerModal({
       setCameraError("Could not access camera. Please allow camera permissions or upload a photo.");
       setActiveTab("upload");
     }
-  }, [facingMode, stopCamera]);
+  }, [facingMode, orientation, stopCamera]);
 
   // Toggle Torch / Flashlight
   const toggleTorch = async () => {
@@ -107,6 +110,11 @@ export default function ReceiptScannerModal({
   // Flip Camera (Rear <-> Front)
   const flipCamera = () => {
     setFacingMode((prev) => (prev === "environment" ? "user" : "environment"));
+  };
+
+  // Toggle Orientation (Portrait <-> Landscape)
+  const toggleOrientation = () => {
+    setOrientation((prev) => (prev === "portrait" ? "landscape" : "portrait"));
   };
 
   // Lifecycle when modal opens/closes or tab changes
@@ -344,17 +352,7 @@ export default function ReceiptScannerModal({
           {/* 2. Live Camera View */}
           {!scannedData && !scanning && activeTab === "camera" && (
             <div>
-              <div
-                style={{
-                  position: "relative",
-                  width: "100%",
-                  height: 270,
-                  backgroundColor: "#000",
-                  borderRadius: 14,
-                  overflow: "hidden",
-                  boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-                }}
-              >
+              <div className={orientation === "portrait" ? "scanner-viewfinder-portrait" : "scanner-viewfinder-landscape"}>
                 <video
                   ref={videoRef}
                   playsInline
@@ -371,42 +369,53 @@ export default function ReceiptScannerModal({
                 <div
                   style={{
                     position: "absolute",
-                    top: "14%",
-                    left: "10%",
-                    right: "10%",
-                    bottom: "14%",
-                    border: "2px solid rgba(249, 115, 22, 0.7)",
-                    borderRadius: 12,
-                    boxShadow: "0 0 16px rgba(249, 115, 22, 0.35)",
+                    top: orientation === "portrait" ? "6%" : "12%",
+                    left: orientation === "portrait" ? "7%" : "10%",
+                    right: orientation === "portrait" ? "7%" : "10%",
+                    bottom: orientation === "portrait" ? "6%" : "12%",
+                    border: "2px dashed rgba(249, 115, 22, 0.7)",
+                    borderRadius: 14,
+                    boxShadow: "0 0 20px rgba(249, 115, 22, 0.3), inset 0 0 16px rgba(249, 115, 22, 0.1)",
                     pointerEvents: "none",
                   }}
                 >
+                  {/* Corner Accent Brackets */}
+                  <div className="reticle-corner reticle-tl" />
+                  <div className="reticle-corner reticle-tr" />
+                  <div className="reticle-corner reticle-bl" />
+                  <div className="reticle-corner reticle-br" />
+
+                  {/* Animated Laser Scanning Beam */}
                   <div
                     style={{
                       position: "absolute",
-                      top: 0,
                       left: 0,
                       right: 0,
-                      height: 2,
-                      background: "linear-gradient(90deg, transparent, #22c55e, transparent)",
-                      boxShadow: "0 0 8px #22c55e",
-                      animation: "scanLineAnim 2s ease-in-out infinite",
+                      height: 3,
+                      background: "linear-gradient(90deg, transparent, #22c55e, #4ade80, transparent)",
+                      boxShadow: "0 0 12px #22c55e, 0 0 4px #4ade80",
+                      animation: "scanLineAnim 2.2s ease-in-out infinite alternate",
                     }}
                   />
+
                   <span
                     style={{
                       position: "absolute",
                       bottom: 8,
-                      left: 0,
-                      right: 0,
+                      left: 6,
+                      right: 6,
                       textAlign: "center",
                       fontSize: 11,
                       fontWeight: 800,
                       color: "#fff",
-                      textShadow: "0 2px 4px rgba(0,0,0,0.8)",
+                      textShadow: "0 2px 4px rgba(0,0,0,0.9)",
+                      background: "rgba(0,0,0,0.6)",
+                      backdropFilter: "blur(4px)",
+                      padding: "4px 6px",
+                      borderRadius: 6,
                     }}
                   >
-                    Align price tag or receipt in box
+                    📱 Align receipt vertically in box
                   </span>
                 </div>
 
@@ -421,13 +430,36 @@ export default function ReceiptScannerModal({
                     zIndex: 10,
                   }}
                 >
+                  <button
+                    type="button"
+                    onClick={toggleOrientation}
+                    style={{
+                      background: "rgba(0,0,0,0.6)",
+                      border: "1px solid rgba(255,255,255,0.25)",
+                      color: "#fff",
+                      borderRadius: "20px",
+                      padding: "4px 10px",
+                      height: 36,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 11,
+                      fontWeight: 800,
+                      backdropFilter: "blur(4px)",
+                    }}
+                    title="Toggle Orientation"
+                  >
+                    {orientation === "portrait" ? "📱 Portrait" : "🖼️ Landscape"}
+                  </button>
+
                   {hasTorch && (
                     <button
                       type="button"
                       onClick={toggleTorch}
                       style={{
                         background: torchOn ? "#eab308" : "rgba(0,0,0,0.6)",
-                        border: "1px solid rgba(255,255,255,0.2)",
+                        border: "1px solid rgba(255,255,255,0.25)",
                         color: torchOn ? "#000" : "#fff",
                         borderRadius: "50%",
                         width: 36,
@@ -437,6 +469,7 @@ export default function ReceiptScannerModal({
                         alignItems: "center",
                         justifyContent: "center",
                         fontSize: 16,
+                        backdropFilter: "blur(4px)",
                       }}
                       title="Toggle Flashlight"
                     >
@@ -448,7 +481,7 @@ export default function ReceiptScannerModal({
                     onClick={flipCamera}
                     style={{
                       background: "rgba(0,0,0,0.6)",
-                      border: "1px solid rgba(255,255,255,0.2)",
+                      border: "1px solid rgba(255,255,255,0.25)",
                       color: "#fff",
                       borderRadius: "50%",
                       width: 36,
@@ -458,6 +491,7 @@ export default function ReceiptScannerModal({
                       alignItems: "center",
                       justifyContent: "center",
                       fontSize: 16,
+                      backdropFilter: "blur(4px)",
                     }}
                     title="Flip Camera"
                   >
@@ -652,8 +686,9 @@ export default function ReceiptScannerModal({
                     type="number"
                     step="0.01"
                     min="0"
-                    value={scannedData.amount}
-                    onChange={(e) => setScannedData({ ...scannedData, amount: parseFloat(e.target.value) || 0 })}
+                    placeholder="0.00"
+                    value={scannedData.amount ?? ""}
+                    onChange={(e) => setScannedData({ ...scannedData, amount: e.target.value })}
                     style={{ fontSize: 18, fontWeight: 900, color: "#22c55e" }}
                   />
 

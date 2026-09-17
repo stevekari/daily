@@ -9,6 +9,8 @@ public class RegisterRequest {
     private String confirmPassword;
     private String firstName;
     private String lastName;
+    private Double monthlyBudget;
+    private Double dailyLimit;
 
     public RegisterRequest() {}
 
@@ -20,6 +22,19 @@ public class RegisterRequest {
         this.confirmPassword = confirmPassword;
         this.firstName      = firstName;
         this.lastName       = lastName;
+    }
+
+    public RegisterRequest(String username, String email, String password,
+                           String confirmPassword, String firstName, String lastName,
+                           Double monthlyBudget, Double dailyLimit) {
+        this.username       = username;
+        this.email          = email;
+        this.password       = password;
+        this.confirmPassword = confirmPassword;
+        this.firstName      = firstName;
+        this.lastName       = lastName;
+        this.monthlyBudget  = monthlyBudget;
+        this.dailyLimit     = dailyLimit;
     }
 
     public String getUsername()         { return username; }
@@ -39,4 +54,10 @@ public class RegisterRequest {
 
     public String getLastName()         { return lastName; }
     public void setLastName(String lastName) { this.lastName = lastName; }
+
+    public Double getMonthlyBudget()    { return monthlyBudget; }
+    public void setMonthlyBudget(Double monthlyBudget) { this.monthlyBudget = monthlyBudget; }
+
+    public Double getDailyLimit()       { return dailyLimit; }
+    public void setDailyLimit(Double dailyLimit) { this.dailyLimit = dailyLimit; }
 }

@@ -24,6 +24,8 @@ import {
   checkBudgetAlerts,
   markAllAsRead,
   deleteNotification,
+  updateNotification,
+  deleteMultipleNotifications,
   clearAllNotifications,
 } from "../utils/notificationEngine";
 
@@ -216,6 +218,16 @@ export default function BudgetApp({ userId, username, onLogout }) {
   const [settingsName, setSettingsName] = useState(displayName);
   const [settingsBudget, setSettingsBudget] = useState("");
   const [settingsDaily, setSettingsDaily] = useState("");
+
+  useEffect(() => {
+    if (showSettings) {
+      setSettingsName(displayName || username || "");
+      const bAmt = Number(localBudget ?? (budget?.totalBudget ?? 1000)) || 1000;
+      const dAmt = Number(localDailyLimit ?? (budget?.dailyLimit ?? (bAmt > 0 ? Math.round(bAmt / 30) : 50))) || 50;
+      setSettingsBudget(bAmt > 0 ? String(bAmt) : "");
+      setSettingsDaily(dAmt > 0 ? String(dAmt) : "");
+    }
+  }, [showSettings, displayName, username, localBudget, localDailyLimit, budget]);
 
   // Name inline editing
   const [editingName, setEditingName] = useState(false);
@@ -582,32 +594,99 @@ export default function BudgetApp({ userId, username, onLogout }) {
       return;
     }
 
+    const nowTime = new Date().toTimeString().slice(0, 8);
+    const fullDateTime = formData.date ? `${formData.date}T${nowTime}` : new Date().toISOString().slice(0, 19);
+    const tempId = Date.now();
+    const optimisticTx = {
+      id: tempId,
+      userId: parseInt(userId),
+      name: formData.name.trim(),
+      amount: parseFloat(formData.amount),
+      type: formData.type || "EXPENSE",
+      dateTime: fullDateTime,
+      date: fullDateTime,
+      category: formData.category || "General",
+      description: formData.reason || "",
+      _isOptimistic: true,
+    };
+
+    // 1. Instant UI update (0ms delay) - immediately appears on screen
+    setTransactions((prev) => [optimisticTx, ...(Array.isArray(prev) ? prev : [])]);
+    setFormData({
+      name: "",
+      amount: "",
+      type: "EXPENSE",
+      date: new Date().toISOString().slice(0, 10),
+      category: "General",
+      reason: "",
+    });
+    setDetectedCategory(null);
+
+    // 2. Persist in background
     try {
-      const nowTime = new Date().toTimeString().slice(0, 8);
-      const fullDateTime = formData.date ? `${formData.date}T${nowTime}` : new Date().toISOString().slice(0, 19);
-
-      await createTransaction({
+      const savedTx = await createTransaction({
         userId: parseInt(userId),
-        name: formData.name,
-        amount: parseFloat(formData.amount),
-        type: formData.type,
+        name: optimisticTx.name,
+        amount: optimisticTx.amount,
+        type: optimisticTx.type,
         dateTime: fullDateTime,
-        category: formData.category || "General",
-        description: formData.reason,
+        category: optimisticTx.category,
+        description: optimisticTx.description,
       });
 
-      setFormData({
-        name: "",
-        amount: "",
-        type: "EXPENSE",
-        date: new Date().toISOString().slice(0, 10),
-        category: "General",
-        reason: "",
-      });
-      setDetectedCategory(null);
-      loadTransactions();
+      if (savedTx && (savedTx.id || savedTx.name)) {
+        setTransactions((prev) =>
+          prev.map((t) => (t.id === tempId ? { ...t, ...savedTx, _isOptimistic: false } : t))
+        );
+      }
     } catch (err) {
       console.error("Error adding transaction:", err);
+      // Rollback on network failure
+      setTransactions((prev) => prev.filter((t) => t.id !== tempId));
+      alert(t("errorAddingTransaction") || "Failed to save transaction. Please check your connection.");
+    }
+  };
+
+  const handleBadgeAction = (actionType) => {
+    setShowAchievements(false);
+    switch (actionType) {
+      case "SCANNER":
+        setShowScanner(true);
+        break;
+      case "EXPORT":
+        setShowExport(true);
+        break;
+      case "GOALS":
+        setCurrentView("goals");
+        break;
+      case "SETTINGS":
+        setShowSettings(true);
+        break;
+      case "ANALYTICS":
+        setCurrentView("analytics");
+        break;
+      case "TRANSACTION":
+      case "EXPENSE":
+      default:
+        setCurrentView("dashboard");
+        setTimeout(() => {
+          const inputElem =
+            document.querySelector("input[placeholder*='name'], input[placeholder*='Coffee'], input[placeholder*='Dinner'], .form-input");
+          if (inputElem) {
+            inputElem.focus();
+            inputElem.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        }, 180);
+        break;
+    }
+  };
+
+  const handleExportSuccess = () => {
+    try {
+      const current = parseInt(localStorage.getItem(`budgetUser_exportedCount_${userId}`) || "0", 10);
+      localStorage.setItem(`budgetUser_exportedCount_${userId}`, String(current + 1));
+    } catch {
+      // ignore storage error
     }
   };
 
@@ -621,19 +700,54 @@ export default function BudgetApp({ userId, username, onLogout }) {
       return;
     }
 
+    const tempId = Date.now();
+    const fullDateTime = scannedTx.dateTime || scannedTx.date || new Date().toISOString().slice(0, 16);
+    const optimisticTx = {
+      id: tempId,
+      userId: parseInt(userId),
+      name: scannedTx.name || "Receipt Item",
+      amount: parseFloat(scannedTx.amount) || 0,
+      type: scannedTx.type || "EXPENSE",
+      dateTime: fullDateTime,
+      date: fullDateTime,
+      category: scannedTx.category || "General",
+      description: scannedTx.reason || "Scanned Receipt",
+      _isOptimistic: true,
+    };
+
+    // 1. Instant UI update
+    setTransactions((prev) => [optimisticTx, ...(Array.isArray(prev) ? prev : [])]);
+
+    // Increment scanned count for achievements
     try {
-      await createTransaction({
+      const current = parseInt(localStorage.getItem(`budgetUser_scannedCount_${userId}`) || "0", 10);
+      localStorage.setItem(`budgetUser_scannedCount_${userId}`, String(current + 1));
+    } catch {
+      // ignore storage error
+    }
+
+    // 2. Persist in background
+    try {
+      const savedTx = await createTransaction({
         userId: parseInt(userId),
-        name: scannedTx.name,
-        amount: parseFloat(scannedTx.amount),
-        type: scannedTx.type || "EXPENSE",
-        dateTime: scannedTx.dateTime || new Date().toISOString().slice(0, 16),
-        category: scannedTx.category || "General",
-        description: scannedTx.reason || "Scanned Receipt",
+        name: optimisticTx.name,
+        amount: optimisticTx.amount,
+        type: optimisticTx.type,
+        dateTime: optimisticTx.dateTime,
+        category: optimisticTx.category,
+        description: optimisticTx.description,
       });
-      loadTransactions();
+
+      if (savedTx && (savedTx.id || savedTx.name)) {
+        setTransactions((prev) =>
+          prev.map((t) => (t.id === tempId ? { ...t, ...savedTx, _isOptimistic: false } : t))
+        );
+      }
     } catch (err) {
       console.error("Error adding scanned transaction:", err);
+      // Rollback
+      setTransactions((prev) => prev.filter((t) => t.id !== tempId));
+      alert("Failed to save scanned receipt. Please check your connection.");
     }
   };
 
@@ -652,6 +766,20 @@ export default function BudgetApp({ userId, username, onLogout }) {
         }
       }
 
+      // Optimistically add imported items
+      const tempBatch = txsToImport.map((t, idx) => ({
+        ...t,
+        id: Date.now() + idx,
+        userId: parseInt(userId),
+        amount: parseFloat(t.amount) || 0,
+        type: t.type || "EXPENSE",
+        dateTime: t.dateTime || t.date || new Date().toISOString().slice(0, 16),
+        category: t.category || "General",
+        description: t.description || "Imported",
+        _isOptimistic: true,
+      }));
+      setTransactions((prev) => [...tempBatch, ...(Array.isArray(prev) ? prev : [])]);
+
       for (const tx of txsToImport) {
         await createTransaction({
           userId: parseInt(userId),
@@ -666,7 +794,7 @@ export default function BudgetApp({ userId, username, onLogout }) {
       await loadTransactions();
     } catch (err) {
       console.error("Error importing transactions:", err);
-      setTransactions((prev) => [...importedTxs.map((t, idx) => ({ ...t, id: t.id || Date.now() + idx })), ...prev]);
+      loadTransactions();
     }
   };
 
@@ -680,11 +808,17 @@ export default function BudgetApp({ userId, username, onLogout }) {
       return;
     }
 
+    // Instant UI update
+    const previousTransactions = [...transactions];
+    setTransactions((prev) => prev.filter((t) => t.id !== id));
+
     try {
       await deleteTransaction(id);
-      loadTransactions();
     } catch (err) {
       console.error("Error deleting transaction:", err);
+      // Rollback on failure
+      setTransactions(previousTransactions);
+      alert("Failed to delete transaction. Restoring...");
     }
   };
 
@@ -699,34 +833,45 @@ export default function BudgetApp({ userId, username, onLogout }) {
       return;
     }
 
+    const txToUpdate = { ...editingTx };
+    const previousTransactions = [...transactions];
+
+    // Instant UI update
+    setTransactions((prev) =>
+      prev.map((t) =>
+        t.id === txToUpdate.id
+          ? {
+              ...t,
+              amount: parseFloat(txToUpdate.amount),
+              type: txToUpdate.type,
+              name: txToUpdate.name,
+              category: txToUpdate.category,
+              description: txToUpdate.description,
+            }
+          : t
+      )
+    );
+    setEditingTx(null);
+
     try {
-      await updateTransaction(editingTx.id, {
+      const updated = await updateTransaction(txToUpdate.id, {
         userId: parseInt(userId),
-        name: editingTx.name,
-        amount: parseFloat(editingTx.amount),
-        type: editingTx.type,
-        category: editingTx.category,
-        description: editingTx.description,
+        name: txToUpdate.name,
+        amount: parseFloat(txToUpdate.amount),
+        type: txToUpdate.type,
+        category: txToUpdate.category,
+        description: txToUpdate.description,
       });
-      setEditingTx(null);
-      loadTransactions();
+      if (updated && updated.id) {
+        setTransactions((prev) =>
+          prev.map((t) => (t.id === txToUpdate.id ? { ...t, ...updated } : t))
+        );
+      }
     } catch (err) {
       console.error("Error updating transaction:", err);
-      setTransactions((prev) =>
-        prev.map((t) =>
-          t.id === editingTx.id
-            ? {
-                ...t,
-                amount: parseFloat(editingTx.amount),
-                type: editingTx.type,
-                name: editingTx.name,
-                category: editingTx.category,
-                description: editingTx.description,
-              }
-            : t
-        )
-      );
-      setEditingTx(null);
+      // Rollback on failure
+      setTransactions(previousTransactions);
+      alert("Failed to update transaction. Restoring...");
     }
   };
 
@@ -742,6 +887,16 @@ export default function BudgetApp({ userId, username, onLogout }) {
 
   const handleDeleteNotification = (id) => {
     deleteNotification(userId, id);
+    refreshNotifications();
+  };
+
+  const handleUpdateNotification = (id, updates) => {
+    updateNotification(userId, id, updates);
+    refreshNotifications();
+  };
+
+  const handleDeleteMultipleNotifications = (ids) => {
+    deleteMultipleNotifications(userId, ids);
     refreshNotifications();
   };
 
@@ -961,6 +1116,7 @@ export default function BudgetApp({ userId, username, onLogout }) {
         onClose={() => setShowAchievements(false)}
         streakCount={streakInfo.currentStreak}
         badges={badges}
+        onAction={handleBadgeAction}
       />
 
       {/* ── RECEIPT SCANNER MODAL ─────────────────────────────────── */}
@@ -981,6 +1137,8 @@ export default function BudgetApp({ userId, username, onLogout }) {
         notifications={notifications}
         onMarkAllAsRead={handleMarkAllRead}
         onDeleteNotification={handleDeleteNotification}
+        onUpdateNotification={handleUpdateNotification}
+        onDeleteMultiple={handleDeleteMultipleNotifications}
         onClearAll={handleClearAllNotifications}
       />
 
@@ -994,6 +1152,7 @@ export default function BudgetApp({ userId, username, onLogout }) {
         totalIncome={totalIncome}
         transactions={txList}
         currencySymbol={currencySymbol}
+        onExportSuccess={handleExportSuccess}
       />
 
       {/* ── DATA IMPORT MODAL (JSON / CSV) ────────────────────────── */}
@@ -2840,7 +2999,7 @@ export default function BudgetApp({ userId, username, onLogout }) {
 
         {/* Footer */}
         <footer className="main-footer">
-          STEVE BUDGET APPS · {new Date().getFullYear()} · PWA Ready 📱
+          STEVE BUDGET APPS · {new Date().getFullYear()}
         </footer>
 
         {/* Universal Multi-Device PWA Install Guide Modal */}

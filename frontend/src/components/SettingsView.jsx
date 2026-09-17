@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLanguage } from "../LanguageContext";
 import { useTheme, ThemeToggle } from "../ThemeContext";
 import {
@@ -24,37 +24,44 @@ export const CURRENCY_OPTIONS = [
 ];
 
 export const COUNTRY_DIAL_CODES = [
-  { code: "+34", flag: "🇪🇸", name: "Spain (+34)" },
-  { code: "+1", flag: "🇺🇸", name: "United States / Canada (+1)" },
-  { code: "+44", flag: "🇬🇧", name: "United Kingdom (+44)" },
-  { code: "+33", flag: "🇫🇷", name: "France (+33)" },
-  { code: "+49", flag: "🇩🇪", name: "Germany (+49)" },
-  { code: "+351", flag: "🇵🇹", name: "Portugal (+351)" },
-  { code: "+39", flag: "🇮🇹", name: "Italy (+39)" },
-  { code: "+233", flag: "🇬🇭", name: "Ghana (+233)" },
-  { code: "+234", flag: "🇳🇬", name: "Nigeria (+234)" },
-  { code: "+91", flag: "🇮🇳", name: "India (+91)" },
-  { code: "+61", flag: "🇦🇺", name: "Australia (+61)" },
-  { code: "+31", flag: "🇳🇱", name: "Netherlands (+31)" },
-  { code: "+32", flag: "🇧🇪", name: "Belgium (+32)" },
-  { code: "+41", flag: "🇨🇭", name: "Switzerland (+41)" },
-  { code: "+46", flag: "🇸🇪", name: "Sweden (+46)" },
-  { code: "+47", flag: "🇳🇴", name: "Norway (+47)" },
-  { code: "+45", flag: "🇩🇰", name: "Denmark (+45)" },
-  { code: "+353", flag: "🇮🇪", name: "Ireland (+353)" },
-  { code: "+43", flag: "🇦🇹", name: "Austria (+43)" },
-  { code: "+48", flag: "🇵🇱", name: "Poland (+48)" },
-  { code: "+55", flag: "🇧🇷", name: "Brazil (+55)" },
-  { code: "+52", flag: "🇲🇽", name: "Mexico (+52)" },
-  { code: "+27", flag: "🇿🇦", name: "South Africa (+27)" },
-  { code: "+254", flag: "🇰🇪", name: "Kenya (+254)" },
-  { code: "+81", flag: "🇯🇵", name: "Japan (+81)" },
-  { code: "+82", flag: "🇰🇷", name: "South Korea (+82)" },
-  { code: "+86", flag: "🇨🇳", name: "China (+86)" },
-  { code: "+971", flag: "🇦🇪", name: "UAE (+971)" },
-  { code: "+966", flag: "🇸🇦", name: "Saudi Arabia (+966)" },
-  { code: "+65", flag: "🇸🇬", name: "Singapore (+65)" },
-  { code: "+64", flag: "🇳🇿", name: "New Zealand (+64)" },
+  { code: "+34", country: "Spain (ES)", flag: "🇪🇸" },
+  { code: "+1", country: "USA / Canada (US/CA)", flag: "🇺🇸" },
+  { code: "+44", country: "United Kingdom (UK)", flag: "🇬🇧" },
+  { code: "+49", country: "Germany (DE)", flag: "🇩🇪" },
+  { code: "+33", country: "France (FR)", flag: "🇫🇷" },
+  { code: "+39", country: "Italy (IT)", flag: "🇮🇹" },
+  { code: "+351", country: "Portugal (PT)", flag: "🇵🇹" },
+  { code: "+31", country: "Netherlands (NL)", flag: "🇳🇱" },
+  { code: "+32", country: "Belgium (BE)", flag: "🇧🇪" },
+  { code: "+41", country: "Switzerland (CH)", flag: "🇨🇭" },
+  { code: "+43", country: "Austria (AT)", flag: "🇦🇹" },
+  { code: "+46", country: "Sweden (SE)", flag: "🇸🇪" },
+  { code: "+47", country: "Norway (NO)", flag: "🇳🇴" },
+  { code: "+45", country: "Denmark (DK)", flag: "🇩🇰" },
+  { code: "+358", country: "Finland (FI)", flag: "🇫🇮" },
+  { code: "+48", country: "Poland (PL)", flag: "🇵🇱" },
+  { code: "+353", country: "Ireland (IE)", flag: "🇮🇪" },
+  { code: "+30", country: "Greece (GR)", flag: "🇬🇷" },
+  { code: "+420", country: "Czech Republic (CZ)", flag: "🇨🇿" },
+  { code: "+40", country: "Romania (RO)", flag: "🇷🇴" },
+  { code: "+36", country: "Hungary (HU)", flag: "🇭🇺" },
+  { code: "+352", country: "Luxembourg (LU)", flag: "🇱🇺" },
+  { code: "+55", country: "Brazil (BR)", flag: "🇧🇷" },
+  { code: "+52", country: "Mexico (MX)", flag: "🇲🇽" },
+  { code: "+54", country: "Argentina (AR)", flag: "🇦🇷" },
+  { code: "+56", country: "Chile (CL)", flag: "🇨🇱" },
+  { code: "+57", country: "Colombia (CO)", flag: "🇨🇴" },
+  { code: "+91", country: "India (IN)", flag: "🇮🇳" },
+  { code: "+81", country: "Japan (JP)", flag: "🇯🇵" },
+  { code: "+82", country: "South Korea (KR)", flag: "🇰🇷" },
+  { code: "+61", country: "Australia (AU)", flag: "🇦🇺" },
+  { code: "+64", country: "New Zealand (NZ)", flag: "🇳🇿" },
+  { code: "+27", country: "South Africa (ZA)", flag: "🇿🇦" },
+  { code: "+234", country: "Nigeria (NG)", flag: "🇳🇬" },
+  { code: "+233", country: "Ghana (GH)", flag: "🇬🇭" },
+  { code: "+254", country: "Kenya (KE)", flag: "🇰🇪" },
+  { code: "+971", country: "UAE (AE)", flag: "🇦🇪" },
+  { code: "+966", country: "Saudi Arabia (SA)", flag: "🇸🇦" },
 ];
 
 export default function SettingsView({
@@ -64,8 +71,8 @@ export default function SettingsView({
   userAvatar,
   budgetAmount,
   dailyLimit,
-  currencySymbol = "€",
-  lockPastMonths = true,
+  currencySymbol,
+  lockPastMonths,
   onSaveProfile,
   onSaveBudget,
   onSaveCurrency,
@@ -82,13 +89,25 @@ export default function SettingsView({
 
   // Local form state
   const [name, setName] = useState(displayName || username || "");
-  const [budgetVal, setBudgetVal] = useState(String(budgetAmount || ""));
-  const [dailyVal, setDailyVal] = useState(String(dailyLimit || ""));
+  const [budgetVal, setBudgetVal] = useState(() => (budgetAmount > 0 ? String(budgetAmount) : ""));
+  const [dailyVal, setDailyVal] = useState(() => (dailyLimit > 0 ? String(dailyLimit) : ""));
   const [currency, setCurrency] = useState(currencySymbol || "€");
   const [lockPast, setLockPast] = useState(lockPastMonths);
   const [startOfMonth, setStartOfMonth] = useState(() => {
     return localStorage.getItem(`budgetUser_startDay_${userId}`) || "1";
   });
+
+  useEffect(() => {
+    if (budgetAmount !== undefined && budgetAmount !== null) {
+      setBudgetVal(budgetAmount > 0 ? String(budgetAmount) : "");
+    }
+  }, [budgetAmount]);
+
+  useEffect(() => {
+    if (dailyLimit !== undefined && dailyLimit !== null) {
+      setDailyVal(dailyLimit > 0 ? String(dailyLimit) : "");
+    }
+  }, [dailyLimit]);
 
   // Phone SMS overspending notification state (Optional - post registration)
   const storedFullPhone = typeof window !== "undefined" ? localStorage.getItem(`budgetUser_phone_${userId}`) || "" : "";
@@ -771,8 +790,8 @@ export default function SettingsView({
                       disabled={phoneLoading || phoneStep === "code_sent"}
                     >
                       {COUNTRY_DIAL_CODES.map((c) => (
-                        <option key={c.name} value={c.code}>
-                          {c.flag} {c.name}
+                        <option key={`${c.country}-${c.code}`} value={c.code}>
+                          {c.flag} {c.country} ({c.code})
                         </option>
                       ))}
                     </select>

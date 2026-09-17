@@ -1,9 +1,10 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useLanguage } from "../LanguageContext";
 import { getCategoryMeta } from "../utils/autoCategorizer";
 import { generateSmartInsights } from "../utils/smartInsights";
 import { printMonthlyFinancialReport } from "../utils/exportUtils";
 import AnimatedNumber from "./AnimatedNumber";
+import WheelDatePicker from "./WheelDatePicker";
 import "../styles/AnalyticsCharts.css";
 
 /**
@@ -37,10 +38,12 @@ export default function AnalyticsCharts({
   const [customEndDate, setCustomEndDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [selectedCategory, setSelectedCategory] = useState("ALL");
 
-  // Hover & Tooltip state for SVG timeline
+  // Hover & Selected state for SVG timeline
   const [hoveredPoint, setHoveredPoint] = useState(null);
+  const [selectedPoint, setSelectedPoint] = useState(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
   const svgRef = useRef(null);
+  const scrollTrackRef = useRef(null);
 
   // Safe transaction list
   const txList = useMemo(() => (Array.isArray(transactions) ? transactions : []), [transactions]);
@@ -374,38 +377,28 @@ export default function AnalyticsCharts({
     return { items, totalCatExpense };
   }, [filteredTransactions]);
 
-  // ── SVG Interactive Hover Helpers ────────────────────────────────────
-  const handleSvgMouseMove = (e) => {
-    if (!svgRef.current || timelineSeries.points.length === 0) return;
-    const rect = svgRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const width = rect.width;
-    const pointIdx = Math.min(
-      timelineSeries.points.length - 1,
-      Math.max(0, Math.floor((x / width) * timelineSeries.points.length))
-    );
-
-    const point = timelineSeries.points[pointIdx];
-    if (point) {
-      setHoveredPoint(point);
-      setTooltipPos({ x, y: e.clientY - rect.top });
-    }
-  };
-
-  const handleSvgMouseLeave = () => {
-    setHoveredPoint(null);
-  };
-
-  // SVG Coordinates calculation
-  const svgWidth = 800;
-  const svgHeight = 240;
-  const paddingX = 40;
-  const paddingY = 30;
+  // ── SVG Interactive Pointer & Touch Helpers ─────────────────────────
+  const pointsCount = timelineSeries.points.length;
+  // Generous width per day (at least 36px per point for crystal-clear readability on mobile)
+  const svgWidth = Math.max(820, pointsCount * 36);
+  const svgHeight = 260;
+  const paddingX = 48;
+  const paddingY = 32;
   const plotWidth = svgWidth - paddingX * 2;
   const plotHeight = svgHeight - paddingY * 2;
-
-  const pointsCount = timelineSeries.points.length;
   const maxScale = timelineSeries.maxVal || 100;
+
+  // Auto-select initial point (last active point or first)
+  useEffect(() => {
+    if (timelineSeries.points && timelineSeries.points.length > 0) {
+      const activePts = timelineSeries.points.filter((p) => p.expense > 0 || p.income > 0);
+      if (activePts.length > 0) {
+        setSelectedPoint(activePts[activePts.length - 1]);
+      } else {
+        setSelectedPoint(timelineSeries.points[0]);
+      }
+    }
+  }, [timelineSeries.points]);
 
   const getSvgCoordinates = (point, idx, valueKey) => {
     const x = paddingX + (idx / Math.max(1, pointsCount - 1)) * plotWidth;
@@ -414,38 +407,89 @@ export default function AnalyticsCharts({
     return { x, y };
   };
 
-  // Build SVG Path strings
+  const handleSvgPointerMove = (e) => {
+    if (!svgRef.current || pointsCount === 0) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const clientX = e.clientX ?? (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+    const clientY = e.clientY ?? (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+    if (!clientX) return;
+
+    const relX = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const pointIdx = Math.min(
+      pointsCount - 1,
+      Math.max(0, Math.round(relX * (pointsCount - 1)))
+    );
+
+    const point = timelineSeries.points[pointIdx];
+    if (point) {
+      setHoveredPoint(point);
+      setSelectedPoint(point);
+      setTooltipPos({ x: clientX - rect.left, y: clientY - rect.top });
+    }
+  };
+
+  const handleSvgMouseLeave = () => {
+    setHoveredPoint(null);
+  };
+
+  const handlePointClick = (pt) => {
+    setSelectedPoint(pt);
+    setHoveredPoint(pt);
+  };
+
+  // Smooth Bezier Curve generator (Catmull-Rom spline)
+  const getSmoothCurvePath = (points, valueKey) => {
+    if (!points || points.length === 0) return "";
+    if (points.length === 1) {
+      const p = getSvgCoordinates(points[0], 0, valueKey);
+      return `M ${p.x} ${p.y}`;
+    }
+    const coords = points.map((pt, i) => getSvgCoordinates(pt, i, valueKey));
+    let path = `M ${coords[0].x} ${coords[0].y}`;
+    for (let i = 0; i < coords.length - 1; i++) {
+      const p0 = coords[i === 0 ? 0 : i - 1];
+      const p1 = coords[i];
+      const p2 = coords[i + 1];
+      const p3 = coords[i + 2] || p2;
+
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+      path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
+    }
+    return path;
+  };
+
   const expensePath = useMemo(() => {
     if (pointsCount === 0) return "";
-    return timelineSeries.points.reduce((path, pt, i) => {
-      const { x, y } = getSvgCoordinates(pt, i, "expense");
-      return i === 0 ? `M ${x} ${y}` : `${path} L ${x} ${y}`;
-    }, "");
-  }, [timelineSeries.points, maxScale]);
+    return getSmoothCurvePath(timelineSeries.points, "expense");
+  }, [timelineSeries.points, maxScale, svgWidth]);
 
   const expenseAreaPath = useMemo(() => {
-    if (pointsCount === 0) return "";
+    if (pointsCount === 0 || !expensePath) return "";
     const first = getSvgCoordinates(timelineSeries.points[0], 0, "expense");
     const last = getSvgCoordinates(timelineSeries.points[pointsCount - 1], pointsCount - 1, "expense");
     const baseLine = paddingY + plotHeight;
-    return `M ${first.x} ${baseLine} L ${expensePath.replace(/^M /, "")} L ${last.x} ${baseLine} Z`;
-  }, [expensePath, timelineSeries.points]);
+    return `${expensePath} L ${last.x} ${baseLine} L ${first.x} ${baseLine} Z`;
+  }, [expensePath, timelineSeries.points, svgWidth]);
 
   const incomePath = useMemo(() => {
     if (pointsCount === 0) return "";
-    return timelineSeries.points.reduce((path, pt, i) => {
-      const { x, y } = getSvgCoordinates(pt, i, "income");
-      return i === 0 ? `M ${x} ${y}` : `${path} L ${x} ${y}`;
-    }, "");
-  }, [timelineSeries.points, maxScale]);
+    return getSmoothCurvePath(timelineSeries.points, "income");
+  }, [timelineSeries.points, maxScale, svgWidth]);
 
   const incomeAreaPath = useMemo(() => {
-    if (pointsCount === 0) return "";
+    if (pointsCount === 0 || !incomePath) return "";
     const first = getSvgCoordinates(timelineSeries.points[0], 0, "income");
     const last = getSvgCoordinates(timelineSeries.points[pointsCount - 1], pointsCount - 1, "income");
     const baseLine = paddingY + plotHeight;
-    return `M ${first.x} ${baseLine} L ${incomePath.replace(/^M /, "")} L ${last.x} ${baseLine} Z`;
-  }, [incomePath, timelineSeries.points]);
+    return `${incomePath} L ${last.x} ${baseLine} L ${first.x} ${baseLine} Z`;
+  }, [incomePath, timelineSeries.points, svgWidth]);
+
+
+  const activeInspectPoint = hoveredPoint || selectedPoint || timelineSeries.points[0];
 
   return (
     <div className="analytics-view-container">
@@ -522,25 +566,26 @@ export default function AnalyticsCharts({
           )}
         </div>
 
-        {/* Custom Date Range Picker inputs */}
+        {/* Custom Date Range Picker inputs with WheelDatePicker */}
         {datePreset === "custom" && (
-          <div className="custom-date-row">
+          <div className="custom-date-row" role="region" aria-label="Custom Date Range">
             <div className="custom-date-field">
-              <span>{t("startDate") || "Start Date"}:</span>
-              <input
-                type="date"
-                className="custom-date-input"
+              <WheelDatePicker
+                label={t("startDate") || "Start Date"}
                 value={customStartDate}
-                onChange={(e) => setCustomStartDate(e.target.value)}
+                onChange={(newDate) => setCustomStartDate(newDate)}
               />
             </div>
+
+            <div className="custom-date-arrow" aria-hidden="true">
+              <span>→</span>
+            </div>
+
             <div className="custom-date-field">
-              <span>{t("endDate") || "End Date"}:</span>
-              <input
-                type="date"
-                className="custom-date-input"
+              <WheelDatePicker
+                label={t("endDate") || "End Date"}
                 value={customEndDate}
-                onChange={(e) => setCustomEndDate(e.target.value)}
+                onChange={(newDate) => setCustomEndDate(newDate)}
               />
             </div>
           </div>
@@ -652,121 +697,236 @@ export default function AnalyticsCharts({
                 <span className="legend-dot income" />
                 <span>{t("incomeType") || "Income"}</span>
               </div>
-              <div className="legend-item">
-                <span className="legend-dot cumulative" />
-                <span>{t("cumulativeCurve") || "Cumulative"}</span>
-              </div>
             </div>
           </div>
 
-          <div className="svg-chart-wrapper" onMouseMove={handleSvgMouseMove} onMouseLeave={handleSvgMouseLeave}>
-            <svg
-              ref={svgRef}
-              viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-              className="timeline-svg"
-              preserveAspectRatio="none"
+          {/* Mobile Swipe Guidance Banner */}
+          <div className="timeline-mobile-swipe-hint">
+            <span className="swipe-hint-icon">👉</span>
+            <span>Swipe horizontally to explore all {pointsCount} days · Tap points to inspect</span>
+          </div>
+
+          {/* Horizontally Scrollable SVG Canvas Container */}
+          <div className="timeline-scroll-track" ref={scrollTrackRef}>
+            <div
+              className="svg-chart-wrapper"
+              onPointerMove={handleSvgPointerMove}
+              onPointerLeave={handleSvgMouseLeave}
+              onTouchMove={handleSvgPointerMove}
             >
-              <defs>
-                <linearGradient id="expenseGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#f87171" stopOpacity="0.7" />
-                  <stop offset="100%" stopColor="#f87171" stopOpacity="0.0" />
-                </linearGradient>
-                <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#4ade80" stopOpacity="0.6" />
-                  <stop offset="100%" stopColor="#4ade80" stopOpacity="0.0" />
-                </linearGradient>
-              </defs>
+              <svg
+                ref={svgRef}
+                viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+                className="timeline-svg"
+                style={{ width: svgWidth, minWidth: svgWidth }}
+              >
+                <defs>
+                  <linearGradient id="expenseGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#f87171" stopOpacity="0.65" />
+                    <stop offset="100%" stopColor="#f87171" stopOpacity="0.0" />
+                  </linearGradient>
+                  <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#4ade80" stopOpacity="0.55" />
+                    <stop offset="100%" stopColor="#4ade80" stopOpacity="0.0" />
+                  </linearGradient>
+                </defs>
 
-              {/* Horizontal Grid lines */}
-              {[0, 0.25, 0.5, 0.75, 1].map((pct, i) => {
-                const y = paddingY + plotHeight * (1 - pct);
-                const val = (maxScale * pct).toFixed(0);
-                return (
-                  <g key={i}>
-                    <line x1={paddingX} y1={y} x2={svgWidth - paddingX} y2={y} className="grid-line" />
-                    <text x={paddingX - 8} y={y + 4} className="axis-text-y">
-                      {currencySymbol}{val}
-                    </text>
-                  </g>
-                );
-              })}
-
-              {/* Income Area & Curve */}
-              {incomeAreaPath && <path d={incomeAreaPath} className="curve-area-income" />}
-              {incomePath && <path d={incomePath} className="curve-line-income" />}
-
-              {/* Expense Area & Curve */}
-              {expenseAreaPath && <path d={expenseAreaPath} className="curve-area-expense" />}
-              {expensePath && <path d={expensePath} className="curve-line-expense" />}
-
-              {/* Data Points */}
-              {timelineSeries.points.map((pt, idx) => {
-                const { x, y } = getSvgCoordinates(pt, idx, "expense");
-                const isHovered = hoveredPoint && hoveredPoint.day === pt.day;
-                return (
-                  <circle
-                    key={idx}
-                    cx={x}
-                    cy={y}
-                    r={isHovered ? 6 : pt.expense > 0 ? 3.5 : 2}
-                    className={`chart-point-dot ${isHovered ? "active" : ""}`}
-                  />
-                );
-              })}
-
-              {/* Crosshair on hover */}
-              {hoveredPoint && (
-                <line
-                  x1={getSvgCoordinates(hoveredPoint, hoveredPoint.day - 1, "expense").x}
-                  y1={paddingY}
-                  x2={getSvgCoordinates(hoveredPoint, hoveredPoint.day - 1, "expense").x}
-                  y2={paddingY + plotHeight}
-                  className="crosshair-line"
-                />
-              )}
-
-              {/* X-Axis Day Labels */}
-              {timelineSeries.points
-                .filter((_, i) => i === 0 || i % Math.ceil(pointsCount / 8) === 0 || i === pointsCount - 1)
-                .map((pt, i) => {
-                  const { x } = getSvgCoordinates(pt, pt.day - 1, "expense");
+                {/* Horizontal Grid lines */}
+                {[0, 0.25, 0.5, 0.75, 1].map((pct, i) => {
+                  const y = paddingY + plotHeight * (1 - pct);
+                  const val = (maxScale * pct).toFixed(0);
                   return (
-                    <text key={i} x={x} y={svgHeight - 10} className="axis-text">
+                    <g key={i}>
+                      <line x1={paddingX} y1={y} x2={svgWidth - paddingX} y2={y} className="grid-line" />
+                      <text x={paddingX - 8} y={y + 4} className="axis-text-y">
+                        {currencySymbol}{val}
+                      </text>
+                    </g>
+                  );
+                })}
+
+                {/* Income Area & Smooth Curve */}
+                {incomeAreaPath && <path d={incomeAreaPath} className="curve-area-income" />}
+                {incomePath && <path d={incomePath} className="curve-line-income" />}
+
+                {/* Expense Area & Smooth Curve */}
+                {expenseAreaPath && <path d={expenseAreaPath} className="curve-area-expense" />}
+                {expensePath && <path d={expensePath} className="curve-line-expense" />}
+
+                {/* Crosshair / Active Day Line */}
+                {activeInspectPoint && (
+                  <line
+                    x1={getSvgCoordinates(activeInspectPoint, activeInspectPoint.day - 1, "expense").x}
+                    y1={paddingY}
+                    x2={getSvgCoordinates(activeInspectPoint, activeInspectPoint.day - 1, "expense").x}
+                    y2={paddingY + plotHeight}
+                    className="crosshair-line"
+                  />
+                )}
+
+                {/* Data Points with Touch/Click Groups */}
+                {timelineSeries.points.map((pt, idx) => {
+                  const { x, y } = getSvgCoordinates(pt, idx, "expense");
+                  const isSelected = activeInspectPoint && activeInspectPoint.day === pt.day;
+                  const hasExpense = pt.expense > 0;
+                  const hasIncome = pt.income > 0;
+
+                  return (
+                    <g
+                      key={idx}
+                      className="chart-point-group"
+                      onClick={() => handlePointClick(pt)}
+                      style={{ cursor: "pointer" }}
+                    >
+                      {/* Invisible larger touch target for easy mobile tapping */}
+                      <circle cx={x} cy={y} r={18} fill="transparent" />
+
+                      {/* Halo ring when selected */}
+                      {isSelected && (
+                        <circle
+                          cx={x}
+                          cy={y}
+                          r={10}
+                          fill="none"
+                          stroke="#f97316"
+                          strokeWidth="2.5"
+                          className="pulse-halo-ring"
+                        />
+                      )}
+
+                      {/* Visible point dot */}
+                      <circle
+                        cx={x}
+                        cy={y}
+                        r={isSelected ? 6 : hasExpense ? 4 : 2.5}
+                        fill={hasExpense ? "#f87171" : hasIncome ? "#4ade80" : "rgba(255,255,255,0.3)"}
+                        stroke="#ffffff"
+                        strokeWidth={isSelected ? 2.5 : 1.5}
+                        className={`chart-point-dot ${isSelected ? "active" : ""}`}
+                      />
+                    </g>
+                  );
+                })}
+
+                {/* X-Axis Day Labels */}
+                {timelineSeries.points.map((pt, i) => {
+                  const { x } = getSvgCoordinates(pt, pt.day - 1, "expense");
+                  const isSelected = activeInspectPoint && activeInspectPoint.day === pt.day;
+                  const shouldShow =
+                    pointsCount <= 16 ||
+                    i === 0 ||
+                    i === pointsCount - 1 ||
+                    pt.day % 2 !== 0 ||
+                    isSelected;
+
+                  if (!shouldShow) return null;
+
+                  return (
+                    <text
+                      key={i}
+                      x={x}
+                      y={svgHeight - 10}
+                      className={`axis-text ${isSelected ? "selected-axis-text" : ""}`}
+                    >
                       Day {pt.day}
                     </text>
                   );
                 })}
-            </svg>
+              </svg>
 
-            {/* Hover Floating Tooltip */}
-            {hoveredPoint && (
-              <div className="chart-interactive-tooltip">
-                <div className="tooltip-date-header">
-                  <span>📅 Day {hoveredPoint.day} ({targetDate.toLocaleDateString(undefined, { month: "short" })})</span>
-                  <span className="tooltip-time-badge">{hoveredPoint.txList.length} tx</span>
-                </div>
-                <div className="tooltip-body-row expense">
-                  <span>{t("spent") || "Expense"}:</span>
-                  <span>{currencySymbol}{hoveredPoint.expense.toFixed(2)}</span>
-                </div>
-                {hoveredPoint.income > 0 && (
-                  <div className="tooltip-body-row income">
-                    <span>{t("income") || "Income"}:</span>
-                    <span>+{currencySymbol}{hoveredPoint.income.toFixed(2)}</span>
+              {/* Hover Floating Tooltip */}
+              {hoveredPoint && (
+                <div
+                  className="chart-interactive-tooltip"
+                  style={{
+                    left: Math.min(Math.max(20, tooltipPos.x - 70), svgWidth - 180),
+                    top: Math.max(10, tooltipPos.y - 85),
+                  }}
+                >
+                  <div className="tooltip-date-header">
+                    <span>📅 Day {hoveredPoint.day}</span>
+                    <span className="tooltip-time-badge">{hoveredPoint.txList.length} tx</span>
                   </div>
-                )}
-                <div className="tooltip-body-row">
-                  <span style={{ color: "#38bdf8" }}>{t("cumulativeCurve") || "Cumulative"}:</span>
-                  <span style={{ color: "#38bdf8" }}>{currencySymbol}{hoveredPoint.cumulativeSpend.toFixed(2)}</span>
-                </div>
-                {hoveredPoint.txList.length > 0 && (
-                  <div className="tooltip-tx-preview">
-                    🏷️ {hoveredPoint.txList[0].name} ({hoveredPoint.txList[0].dateTime ? hoveredPoint.txList[0].dateTime.slice(11, 16) : "12:00"})
+                  <div className="tooltip-body-row expense">
+                    <span>{t("spent") || "Expense"}:</span>
+                    <span>{currencySymbol}{hoveredPoint.expense.toFixed(2)}</span>
                   </div>
-                )}
-              </div>
-            )}
+                  {hoveredPoint.income > 0 && (
+                    <div className="tooltip-body-row income">
+                      <span>{t("income") || "Income"}:</span>
+                      <span>+{currencySymbol}{hoveredPoint.income.toFixed(2)}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* ── ACTIVE DAY SPENDING INSPECTOR CARD ──────────────────── */}
+          {activeInspectPoint && (
+            <div className="timeline-day-inspector-card">
+              <div className="inspector-top-header">
+                <div className="inspector-date-badge">
+                  <span className="inspector-cal-icon">📅</span>
+                  <div>
+                    <span className="inspector-day-title">Day {activeInspectPoint.day} Spending Details</span>
+                    <span className="inspector-date-sub">
+                      {targetDate.toLocaleDateString(undefined, { month: "long", year: "numeric" })}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="inspector-metrics-pill-row">
+                  <div className="inspector-pill expense">
+                    <span className="pill-label">{t("spent") || "Expenses"}:</span>
+                    <span className="pill-val">{currencySymbol}{activeInspectPoint.expense.toFixed(2)}</span>
+                  </div>
+
+                  {activeInspectPoint.income > 0 && (
+                    <div className="inspector-pill income">
+                      <span className="pill-label">{t("income") || "Income"}:</span>
+                      <span className="pill-val">+{currencySymbol}{activeInspectPoint.income.toFixed(2)}</span>
+                    </div>
+                  )}
+
+                  <div className="inspector-pill cumulative">
+                    <span className="pill-label">{t("cumulativeCurve") || "Cumulative"}:</span>
+                    <span className="pill-val">{currencySymbol}{activeInspectPoint.cumulativeSpend.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Transactions on this day */}
+              {activeInspectPoint.txList && activeInspectPoint.txList.length > 0 ? (
+                <div className="inspector-tx-list">
+                  <span className="inspector-tx-header-title">
+                    🧾 {activeInspectPoint.txList.length} Transaction(s) Logged:
+                  </span>
+                  <div className="inspector-tx-chips-wrap">
+                    {activeInspectPoint.txList.map((tx) => {
+                      const meta = getCategoryMeta(tx.category || "General");
+                      return (
+                        <div key={tx.id} className="inspector-tx-chip">
+                          <span className="tx-chip-icon">{meta.icon || "🏷️"}</span>
+                          <span className="tx-chip-name">{tx.name}</span>
+                          <span className="tx-chip-time">
+                            {tx.dateTime ? tx.dateTime.slice(11, 16) : ""}
+                          </span>
+                          <span className={`tx-chip-amount ${tx.type === "INCOME" ? "income" : "expense"}`}>
+                            {tx.type === "INCOME" ? "+" : "-"}{currencySymbol}{parseFloat(tx.amount || 0).toFixed(2)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="inspector-no-tx-note">
+                  ✨ No spending recorded on Day {activeInspectPoint.day} (Zero expense day!)
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

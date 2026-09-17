@@ -4,7 +4,9 @@ import com.steve.budget.dto.AuthResponse;
 import com.steve.budget.dto.FirebaseLoginRequest;
 import com.steve.budget.dto.LoginRequest;
 import com.steve.budget.dto.RegisterRequest;
+import com.steve.budget.model.Budget;
 import com.steve.budget.model.User;
+import com.steve.budget.repository.BudgetRepository;
 import com.steve.budget.repository.UserRepository;
 import com.steve.budget.security.FirebaseTokenVerifier;
 import com.steve.budget.security.JwtUtils;
@@ -13,6 +15,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -25,6 +30,7 @@ public class AuthService {
     );
 
     private final UserRepository userRepository;
+    private final BudgetRepository budgetRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
     private final LoginAttemptService loginAttemptService;
@@ -32,11 +38,13 @@ public class AuthService {
 
     @Autowired
     public AuthService(UserRepository userRepository,
+                       BudgetRepository budgetRepository,
                        PasswordEncoder passwordEncoder,
                        JwtUtils jwtUtils,
                        LoginAttemptService loginAttemptService,
                        FirebaseTokenVerifier firebaseTokenVerifier) {
         this.userRepository = userRepository;
+        this.budgetRepository = budgetRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtils = jwtUtils;
         this.loginAttemptService = loginAttemptService;
@@ -124,6 +132,21 @@ public class AuthService {
             );
 
             User saved = userRepository.save(newUser);
+
+            // Auto-provision initial fixed budget (€1000.00 / €50.00 daily limit)
+            try {
+                Budget initialBudget = new Budget();
+                initialBudget.setUser(saved);
+                initialBudget.setName("Monthly Budget");
+                initialBudget.setTotalBudget(new BigDecimal("1000.00"));
+                initialBudget.setDailyLimit(new BigDecimal("50.00"));
+                initialBudget.setMonthlyLimit(new BigDecimal("1000.00"));
+                initialBudget.setCreatedAt(LocalDateTime.now());
+                budgetRepository.save(initialBudget);
+            } catch (Exception e) {
+                // Non-critical fallback, budget can be configured later
+            }
+
             UserPrincipal principal = UserPrincipal.build(saved);
             String token = jwtUtils.generateToken(principal);
 
@@ -189,6 +212,28 @@ public class AuthService {
         );
 
         User saved = userRepository.save(newUser);
+
+        // Auto-provision initial budget if entered by user
+        if (req.getMonthlyBudget() != null && req.getMonthlyBudget() > 0) {
+            try {
+                Budget initialBudget = new Budget();
+                initialBudget.setUser(saved);
+                initialBudget.setName("Monthly Budget");
+                BigDecimal budgetVal = BigDecimal.valueOf(req.getMonthlyBudget());
+                initialBudget.setTotalBudget(budgetVal);
+                initialBudget.setMonthlyLimit(budgetVal);
+                if (req.getDailyLimit() != null && req.getDailyLimit() > 0) {
+                    initialBudget.setDailyLimit(BigDecimal.valueOf(req.getDailyLimit()));
+                } else {
+                    initialBudget.setDailyLimit(budgetVal.divide(BigDecimal.valueOf(30), 2, RoundingMode.HALF_UP));
+                }
+                initialBudget.setCreatedAt(LocalDateTime.now());
+                budgetRepository.save(initialBudget);
+            } catch (Exception e) {
+                // Non-critical fallback
+            }
+        }
+
         UserPrincipal principal = UserPrincipal.build(saved);
         String token = jwtUtils.generateToken(principal);
 

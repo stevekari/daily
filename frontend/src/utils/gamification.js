@@ -8,64 +8,96 @@ export const BADGES = [
     icon: "🌟",
     title: "First Step",
     description: "Logged your first transaction in Budget Pro",
+    howToEarn: "Record your first expense or income transaction on the dashboard.",
     category: "Activity",
+    categoryColor: "#3b82f6",
     maxProgress: 1,
+    actionType: "TRANSACTION",
+    actionLabel: "➕ Add Transaction",
   },
   {
     id: "streak_3",
     icon: "🔥",
     title: "Streak Novice",
     description: "Logged transactions 3 consecutive days",
+    howToEarn: "Add at least one transaction every day for 3 days in a row.",
     category: "Consistency",
+    categoryColor: "#f97316",
     maxProgress: 3,
+    actionType: "TRANSACTION",
+    actionLabel: "🔥 Log Today's Expense",
   },
   {
     id: "streak_7",
     icon: "⚡",
     title: "Streak Master",
     description: "Logged transactions 7 consecutive days",
+    howToEarn: "Maintain your daily transaction logging streak for 7 full days without missing a day.",
     category: "Consistency",
+    categoryColor: "#eab308",
     maxProgress: 7,
+    actionType: "TRANSACTION",
+    actionLabel: "⚡ Maintain Streak",
   },
   {
     id: "goal_crusher",
     icon: "🎯",
     title: "Goal Setter",
     description: "Created your first savings goal",
+    howToEarn: "Navigate to the Goals tab and set up your first financial savings milestone.",
     category: "Savings",
+    categoryColor: "#10b981",
     maxProgress: 1,
+    actionType: "GOALS",
+    actionLabel: "🎯 Set a Savings Goal",
   },
   {
     id: "frugal_hero",
     icon: "💎",
     title: "Frugal Hero",
     description: "Logged 5 days strictly under your daily limit",
+    howToEarn: "Configure your daily budget limit and stay strictly under budget for 5 distinct days.",
     category: "Discipline",
+    categoryColor: "#8b5cf6",
     maxProgress: 5,
+    actionType: "SETTINGS",
+    actionLabel: "⚙️ Daily Limit Settings",
   },
   {
     id: "receipt_scanner",
     icon: "📸",
     title: "Paperless Pro",
     description: "Used the AI Receipt Scanner to log a receipt",
+    howToEarn: "Scan or upload a receipt using the AI camera scanner and add it to your expenses.",
     category: "Smart",
+    categoryColor: "#06b6d4",
     maxProgress: 1,
+    actionType: "SCANNER",
+    actionLabel: "📸 Scan a Receipt",
   },
   {
     id: "export_master",
     icon: "📄",
     title: "Financial Auditor",
     description: "Exported your first statement report",
+    howToEarn: "Open the Export modal and download your financial report or CSV statement.",
     category: "Smart",
+    categoryColor: "#6366f1",
     maxProgress: 1,
+    actionType: "EXPORT",
+    actionLabel: "📄 Export Statement",
   },
   {
     id: "champion",
     icon: "🏆",
     title: "Budget Champion",
     description: "Logged 15+ transactions and maintained positive balance",
+    howToEarn: "Log 15 or more total transactions while keeping your net financial balance positive.",
     category: "Mastery",
+    categoryColor: "#ec4899",
     maxProgress: 15,
+    actionType: "ANALYTICS",
+    actionLabel: "📊 View Analytics",
   },
 ];
 
@@ -140,8 +172,14 @@ export function evaluateBadges(param1 = {}, param2 = {}) {
 
   const transactions = Array.isArray(options.transactions) ? options.transactions : [];
   const goals = Array.isArray(options.goals) ? options.goals : [];
-  const scannedCount = options.scannedCount || 0;
-  const exportedCount = options.exportedCount || 0;
+  const scannedCount =
+    options.scannedCount !== undefined
+      ? options.scannedCount
+      : parseInt(localStorage.getItem(`budgetUser_scannedCount_${userId}`) || "0", 10);
+  const exportedCount =
+    options.exportedCount !== undefined
+      ? options.exportedCount
+      : parseInt(localStorage.getItem(`budgetUser_exportedCount_${userId}`) || "0", 10);
   const dailyLimit = options.dailyLimit || 50;
 
   const streakResult = calculateStreak(transactions);
