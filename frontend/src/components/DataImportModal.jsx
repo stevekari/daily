@@ -154,7 +154,7 @@ export default function DataImportModal({
                   >
                     <div>
                       <strong>{tx.name}</strong>
-                      <span style={{ color: "#94a3b8", marginLeft: 6 }}>· {tx.category}</span>
+                      <span style={{ color: "#94a3b8", marginLeft: 6 }}>· {t(tx.category || "General")}</span>
                     </div>
                     <span style={{ fontWeight: 800, color: tx.type === "INCOME" ? "#10b981" : "#ef4444" }}>
                       {tx.type === "INCOME" ? "+" : "-"}{currencySymbol}{tx.amount.toFixed(2)}

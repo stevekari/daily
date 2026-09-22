@@ -227,6 +227,77 @@ const translations = {
   },
 };
 
+export const CATEGORY_NAME_TO_KEY = {
+  // English
+  "shopping": "catShopping",
+  "vehicle": "catVehicle",
+  "transportation": "catTransportation",
+  "investment": "catInvestment",
+  "on plan expenses": "catOnPlan",
+  "unplanned expenses": "catUnplanned",
+  "food & dining": "catFood",
+  "food": "catFood",
+  "entertainment": "catEntertainment",
+  "health & medical": "catHealth",
+  "health": "catHealth",
+  "salary & income": "catIncome",
+  "salary": "catIncome",
+  "income": "catIncome",
+  "general": "catGeneral",
+
+  // Spanish
+  "compras": "catShopping",
+  "vehículo": "catVehicle",
+  "vehiculo": "catVehicle",
+  "transporte": "catTransportation",
+  "inversión": "catInvestment",
+  "inversion": "catInvestment",
+  "gastos planificados": "catOnPlan",
+  "gastos imprevistos": "catUnplanned",
+  "comida y restaurantes": "catFood",
+  "comida": "catFood",
+  "entretenimiento": "catEntertainment",
+  "salud y medicina": "catHealth",
+  "salud": "catHealth",
+  "salario e ingresos": "catIncome",
+
+  // French
+  "véhicule": "catVehicle",
+  "transports": "catTransportation",
+  "investissement": "catInvestment",
+  "dépenses prévues": "catOnPlan",
+  "depenses prevues": "catOnPlan",
+  "dépenses imprévues": "catUnplanned",
+  "depenses imprevues": "catUnplanned",
+  "restauration & courses": "catFood",
+  "divertissement": "catEntertainment",
+  "santé & soins": "catHealth",
+  "sante & soins": "catHealth",
+  "santé": "catHealth",
+  "salaire & revenus": "catIncome",
+  "général": "catGeneral",
+
+  // Portuguese
+  "veículo": "catVehicle",
+  "veiculo": "catVehicle",
+  "transportes": "catTransportation",
+  "investimentos": "catInvestment",
+  "despesas planeadas": "catOnPlan",
+  "despesas imprevistas": "catUnplanned",
+  "alimentação & refeições": "catFood",
+  "alimentacao & refeicoes": "catFood",
+  "saúde & farmácia": "catHealth",
+  "saude & farmacia": "catHealth",
+  "salário & rendimentos": "catIncome",
+  "salario & rendimentos": "catIncome",
+  "geral": "catGeneral",
+};
+
+export function getCategoryLabel(categoryName, t) {
+  if (!categoryName) return t ? t("catGeneral") || "General" : "General";
+  return t ? t(categoryName) : categoryName;
+}
+
 const languageOptions = [
   { code: "en", label: "English" },
   { code: "es", label: "Español" },
@@ -674,7 +745,25 @@ const extraTranslations = {
   },
 };
 
-const LanguageContext = createContext(null);
+const defaultLanguageState = {
+  language: "en",
+  setLanguage: () => {},
+  t: (key) => {
+    if (!key) return "";
+    const cleanKey = String(key).trim();
+    const lowerKey = cleanKey.toLowerCase();
+    const mappedCatKey = CATEGORY_NAME_TO_KEY[lowerKey];
+    if (mappedCatKey) {
+      return translations.en?.[mappedCatKey] || extraTranslations.en?.[mappedCatKey] || cleanKey;
+    }
+    return translations.en?.[cleanKey] || extraTranslations.en?.[cleanKey] || cleanKey;
+  },
+  languageOptions,
+  showLanguagePicker: false,
+  setShowLanguagePicker: () => {},
+};
+
+const LanguageContext = createContext(defaultLanguageState);
 
 export function LanguageProvider({ children }) {
   const [language, setLanguageState] = useState(() => localStorage.getItem("budgetLanguage") || "en");
@@ -686,7 +775,33 @@ export function LanguageProvider({ children }) {
     localStorage.setItem("budgetLanguage", nextLanguage);
   };
 
-  const t = (key) => translations[language][key] || extraTranslations[language][key] || translations.en[key] || extraTranslations.en[key] || key;
+  const t = (key) => {
+    if (!key) return "";
+    const cleanKey = String(key).trim();
+    const lowerKey = cleanKey.toLowerCase();
+
+    // Check direct translation match in current language
+    if (translations[language]?.[cleanKey]) return translations[language][cleanKey];
+    if (extraTranslations[language]?.[cleanKey]) return extraTranslations[language][cleanKey];
+
+    // Check category mapping (e.g. "Shopping", "On Plan Expenses", "General")
+    const mappedCatKey = CATEGORY_NAME_TO_KEY[lowerKey];
+    if (mappedCatKey) {
+      const translated =
+        translations[language]?.[mappedCatKey] ||
+        extraTranslations[language]?.[mappedCatKey] ||
+        translations.en?.[mappedCatKey] ||
+        extraTranslations.en?.[mappedCatKey];
+      if (translated) return translated;
+    }
+
+    // Fallback to English direct or raw key
+    return (
+      translations.en?.[cleanKey] ||
+      extraTranslations.en?.[cleanKey] ||
+      cleanKey
+    );
+  };
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t, languageOptions, showLanguagePicker, setShowLanguagePicker }}>
@@ -697,7 +812,8 @@ export function LanguageProvider({ children }) {
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function useLanguage() {
-  return useContext(LanguageContext);
+  const context = useContext(LanguageContext);
+  return context || defaultLanguageState;
 }
 
 export function LanguagePicker({ forceOpen = false }) {
@@ -732,3 +848,5 @@ export function LanguagePicker({ forceOpen = false }) {
     </div>
   );
 }
+
+

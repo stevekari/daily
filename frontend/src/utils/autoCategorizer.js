@@ -251,15 +251,17 @@ export function getCategoryMeta(categoryName) {
     };
   }
 
-  // Fallback keyword matching for legacy / custom strings
-  if (nameLower.includes("shop")) return { category: "Shopping", icon: "🛍️", color: "#ec4899" };
-  if (nameLower.includes("car") || nameLower.includes("vehic") || nameLower.includes("fuel")) return { category: "Vehicle", icon: "🚗", color: "#0284c7" };
-  if (nameLower.includes("trans")) return { category: "Transportation", icon: "🚆", color: "#3b82f6" };
-  if (nameLower.includes("invest")) return { category: "Investment", icon: "📈", color: "#10b981" };
-  if (nameLower.includes("plan")) return { category: "On Plan Expenses", icon: "📋", color: "#8b5cf6" };
-  if (nameLower.includes("food") || nameLower.includes("din")) return { category: "Food & Dining", icon: "🍔", color: "#f97316" };
-  if (nameLower.includes("health") || nameLower.includes("med")) return { category: "Health & Medical", icon: "💊", color: "#14b8a6" };
-  if (nameLower.includes("entertain")) return { category: "Entertainment", icon: "🎬", color: "#eab308" };
-  if (nameLower.includes("income") || nameLower.includes("salary")) return { category: "Salary & Income", icon: "💰", color: "#22c55e" };
+  // Fallback keyword matching for multilingual & custom strings
+  if (nameLower.includes("shop") || nameLower.includes("compra")) return { category: "Shopping", icon: "🛍️", color: "#ec4899" };
+  if (nameLower.includes("car") || nameLower.includes("vehic") || nameLower.includes("veícu") || nameLower.includes("fuel") || nameLower.includes("voiture")) return { category: "Vehicle", icon: "🚗", color: "#0284c7" };
+  if (nameLower.includes("trans") || nameLower.includes("metro") || nameLower.includes("bus") || nameLower.includes("train")) return { category: "Transportation", icon: "🚆", color: "#3b82f6" };
+  if (nameLower.includes("invest") || nameLower.includes("invers") || nameLower.includes("epargne") || nameLower.includes("poupan")) return { category: "Investment", icon: "📈", color: "#10b981" };
+  if (nameLower.includes("plan") || nameLower.includes("prévu") || nameLower.includes("prevu") || nameLower.includes("planead")) return { category: "On Plan Expenses", icon: "📋", color: "#8b5cf6" };
+  if (nameLower.includes("unplan") || nameLower.includes("imprev") || nameLower.includes("imprév") || nameLower.includes("emerg")) return { category: "Unplanned Expenses", icon: "⚠️", color: "#f43f5e" };
+  if (nameLower.includes("food") || nameLower.includes("din") || nameLower.includes("comid") || nameLower.includes("refeic") || nameLower.includes("restau") || nameLower.includes("course") || nameLower.includes("aliment")) return { category: "Food & Dining", icon: "🍔", color: "#f97316" };
+  if (nameLower.includes("health") || nameLower.includes("med") || nameLower.includes("salud") || nameLower.includes("sant") || nameLower.includes("saúd") || nameLower.includes("saud")) return { category: "Health & Medical", icon: "💊", color: "#14b8a6" };
+  if (nameLower.includes("entertain") || nameLower.includes("entreten") || nameLower.includes("divert")) return { category: "Entertainment", icon: "🎬", color: "#eab308" };
+  if (nameLower.includes("income") || nameLower.includes("salary") || nameLower.includes("salario") || nameLower.includes("salaire") || nameLower.includes("revenu") || nameLower.includes("rendimento")) return { category: "Salary & Income", icon: "💰", color: "#22c55e" };
 
+  return { category: categoryName, icon: "🏷️", color: "#64748b" };
 }

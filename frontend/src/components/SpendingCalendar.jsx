@@ -263,7 +263,7 @@ export default function SpendingCalendar({
                         </div>
                         <div style={{ fontSize: 10.5, opacity: 0.75, display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
                           <span style={{ color: meta.color, fontWeight: 700 }}>
-                            {meta.icon} {tx.category || "General"}
+                            {meta.icon} {t(tx.category || "General")}
                           </span>
                           <span>·</span>
                           <span>🕒 {timeStr}</span>

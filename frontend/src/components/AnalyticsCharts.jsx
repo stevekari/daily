@@ -1106,7 +1106,7 @@ export default function AnalyticsCharts({
                 >
                   <div className="cat-row-left">
                     <span className="cat-dot-icon">{cat.icon}</span>
-                    <span className="cat-row-name">{cat.name}</span>
+                    <span className="cat-row-name">{t(cat.name)}</span>
                     <span className="cat-row-pct">({cat.pct}%)</span>
                   </div>
                   <div className="cat-row-amount">
@@ -1240,7 +1240,7 @@ export default function AnalyticsCharts({
                         )}
                       </td>
                       <td>
-                        <span>{meta.icon} {tx.category || "General"}</span>
+                        <span>{meta.icon} {t(tx.category || "General")}</span>
                       </td>
                       <td>
                         <span

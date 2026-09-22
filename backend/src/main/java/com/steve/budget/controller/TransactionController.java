@@ -41,6 +41,22 @@ public class TransactionController {
     }
 
     /**
+     * POST /api/transactions/batch
+     * Add multiple transactions in batch for the authenticated user
+     */
+    @PostMapping("/batch")
+    public ResponseEntity<List<TransactionDTO>> importBatch(
+            @RequestBody List<TransactionDTO> dtos,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        Long userId = principal != null ? principal.getId() : null;
+        if (userId == null && dtos != null && !dtos.isEmpty()) {
+            userId = dtos.get(0).getUserId();
+        }
+        List<TransactionDTO> created = transactionService.addTransactionsBatch(dtos, userId);
+        return ResponseEntity.ok(created);
+    }
+
+    /**
      * GET /api/transactions
      * Get transactions for the authenticated user
      */

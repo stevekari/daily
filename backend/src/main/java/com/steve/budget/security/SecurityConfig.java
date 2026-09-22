@@ -148,6 +148,7 @@ public class SecurityConfig {
                     // Protected API routes
                     auth.requestMatchers("/api/budget/**").authenticated()
                         .requestMatchers("/api/transactions/**").authenticated()
+                        .requestMatchers("/api/categories/**").authenticated()
                         .anyRequest().authenticated();
                 });
 

@@ -60,6 +60,30 @@ public class TransactionService {
     }
 
     /**
+     * Add multiple transactions in a batch for a user
+     */
+    public List<TransactionDTO> addTransactionsBatch(List<TransactionDTO> dtos, Long userId) {
+        if (userId == null) {
+            throw new RuntimeException("Batch transaction import must include a valid userId");
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+
+        List<Transaction> entities = dtos.stream().map(dto -> new Transaction(
+                user,
+                dto.getName() != null ? dto.getName() : "Imported Transaction",
+                dto.getAmount(),
+                dto.getDateTime() != null ? dto.getDateTime() : LocalDateTime.now(),
+                dto.getType() != null ? dto.getType() : Transaction.TransactionType.EXPENSE,
+                dto.getCategory(),
+                dto.getDescription()
+        )).toList();
+
+        List<Transaction> saved = transactionRepository.saveAll(entities);
+        return saved.stream().map(this::toDTO).toList();
+    }
+
+    /**
      * Update an existing transaction with ownership check
      */
     public TransactionDTO updateTransaction(Long id, TransactionDTO dto, Long currentUserId) {

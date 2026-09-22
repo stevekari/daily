@@ -8,6 +8,7 @@ import {
   getUserBudgets,
   getUserTransactions,
   createOrUpdateBudget,
+  importTransactionsBatch,
 } from "../dataApi";
 
 // Utils
@@ -86,7 +87,14 @@ export default function BudgetApp({ userId, username, onLogout }) {
   const { language, t, setShowLanguagePicker } = useLanguage();
 
   // ── CORE DATA STATE ───────────────────────────────────────────────────────
-  const [transactions, setTransactions] = useState([]);
+  const [transactions, setTransactions] = useState(() => {
+    try {
+      const cached = localStorage.getItem(`budgetUser_txs_${userId}`);
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
   const [budget, setBudget] = useState(null);
   const [currentView, setCurrentView] = useState("dashboard"); // 'dashboard' | 'expenses' | 'income' | 'monthly' | 'analytics' | 'calendar' | 'goals' | 'coach' | 'settings'
   const [tabMode, setTabMode] = useState("all"); // 'all' | 'daily' | 'weekly' | 'monthly'
@@ -289,23 +297,38 @@ export default function BudgetApp({ userId, username, onLogout }) {
       try {
         const budgets = await getUserBudgets(userId);
         if (budgets && budgets.length > 0) setBudget(budgets[0]);
-      } catch (err) {
-        console.warn("Budget load notice:", err);
+      } catch {
+        // Silent fallback for budget
       }
 
       const data = await getUserTransactions(userId);
-      setTransactions(Array.isArray(data) ? data : []);
+      const txs = Array.isArray(data) ? data : [];
+      setTransactions(txs);
+      if (txs.length > 0) {
+        localStorage.setItem(`budgetUser_txs_${userId}`, JSON.stringify(txs));
+      }
 
       const list = loadNotifications(userId);
       setNotifications(list);
       setUnreadNotifsCount(getUnreadCount(userId));
     } catch (err) {
-      console.error("Error loading user data:", err);
       if (err.message && err.message.toLowerCase().includes("user not found")) {
         onLogout();
         return;
       }
-      setDataLoadError("Could not load your transactions. Check your network or try again.");
+      // Load fallback from localStorage
+      try {
+        const cached = localStorage.getItem(`budgetUser_txs_${userId}`);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setTransactions(parsed);
+            setDataLoadError(null);
+          }
+        }
+      } catch {
+        // Silent fallback for cache parse
+      }
     } finally {
       setIsLoadingData(false);
     }
@@ -320,6 +343,16 @@ export default function BudgetApp({ userId, username, onLogout }) {
   useEffect(() => {
     fetchUserData();
   }, [fetchUserData]);
+
+  useEffect(() => {
+    if (userId && Array.isArray(transactions) && transactions.length > 0) {
+      try {
+        localStorage.setItem(`budgetUser_txs_${userId}`, JSON.stringify(transactions));
+      } catch {
+        // Silent fallback
+      }
+    }
+  }, [transactions, userId]);
 
   useEffect(() => {
     if (editingName && nameInputRef.current) nameInputRef.current.focus();
@@ -625,7 +658,7 @@ export default function BudgetApp({ userId, username, onLogout }) {
     // 2. Persist in background
     try {
       const savedTx = await createTransaction({
-        userId: parseInt(userId),
+        userId: !isNaN(parseInt(userId, 10)) ? parseInt(userId, 10) : undefined,
         name: optimisticTx.name,
         amount: optimisticTx.amount,
         type: optimisticTx.type,
@@ -635,15 +668,19 @@ export default function BudgetApp({ userId, username, onLogout }) {
       });
 
       if (savedTx && (savedTx.id || savedTx.name)) {
-        setTransactions((prev) =>
-          prev.map((t) => (t.id === tempId ? { ...t, ...savedTx, _isOptimistic: false } : t))
-        );
+        setTransactions((prev) => {
+          const updated = prev.map((t) => (t.id === tempId ? { ...t, ...savedTx, _isOptimistic: false } : t));
+          localStorage.setItem(`budgetUser_txs_${userId}`, JSON.stringify(updated));
+          return updated;
+        });
       }
-    } catch (err) {
-      console.error("Error adding transaction:", err);
-      // Rollback on network failure
-      setTransactions((prev) => prev.filter((t) => t.id !== tempId));
-      alert(t("errorAddingTransaction") || "Failed to save transaction. Please check your connection.");
+    } catch {
+      // Server offline or unreachable; keep optimistic transaction locally
+      setTransactions((prev) => {
+        const updated = prev.map((t) => (t.id === tempId ? { ...t, _isOptimistic: false, _isOffline: true } : t));
+        localStorage.setItem(`budgetUser_txs_${userId}`, JSON.stringify(updated));
+        return updated;
+      });
     }
   };
 
@@ -770,7 +807,7 @@ export default function BudgetApp({ userId, username, onLogout }) {
       const tempBatch = txsToImport.map((t, idx) => ({
         ...t,
         id: Date.now() + idx,
-        userId: parseInt(userId),
+        userId: !isNaN(parseInt(userId, 10)) ? parseInt(userId, 10) : undefined,
         amount: parseFloat(t.amount) || 0,
         type: t.type || "EXPENSE",
         dateTime: t.dateTime || t.date || new Date().toISOString().slice(0, 16),
@@ -780,21 +817,42 @@ export default function BudgetApp({ userId, username, onLogout }) {
       }));
       setTransactions((prev) => [...tempBatch, ...(Array.isArray(prev) ? prev : [])]);
 
-      for (const tx of txsToImport) {
-        await createTransaction({
-          userId: parseInt(userId),
-          name: tx.name || "Imported item",
-          amount: parseFloat(tx.amount) || 0,
-          type: tx.type || "EXPENSE",
-          dateTime: tx.dateTime || tx.date || new Date().toISOString().slice(0, 16),
-          category: tx.category || "General",
-          description: tx.description || "Imported",
-        });
+      try {
+        await importTransactionsBatch(
+          txsToImport.map((tx) => ({
+            userId: !isNaN(parseInt(userId, 10)) ? parseInt(userId, 10) : undefined,
+            name: tx.name || "Imported item",
+            amount: parseFloat(tx.amount) || 0,
+            type: tx.type || "EXPENSE",
+            dateTime: tx.dateTime || tx.date || new Date().toISOString().slice(0, 16),
+            category: tx.category || "General",
+            description: tx.description || "Imported",
+          }))
+        );
+      } catch {
+        for (const tx of txsToImport) {
+          try {
+            await createTransaction({
+              userId: !isNaN(parseInt(userId, 10)) ? parseInt(userId, 10) : undefined,
+              name: tx.name || "Imported item",
+              amount: parseFloat(tx.amount) || 0,
+              type: tx.type || "EXPENSE",
+              dateTime: tx.dateTime || tx.date || new Date().toISOString().slice(0, 16),
+              category: tx.category || "General",
+              description: tx.description || "Imported",
+            });
+          } catch {
+            // silent fallback for individual item
+          }
+        }
       }
-      await loadTransactions();
+      try {
+        await loadTransactions();
+      } catch {
+        // preserve optimistic batch
+      }
     } catch (err) {
       console.error("Error importing transactions:", err);
-      loadTransactions();
     }
   };
 
@@ -809,16 +867,16 @@ export default function BudgetApp({ userId, username, onLogout }) {
     }
 
     // Instant UI update
-    const previousTransactions = [...transactions];
-    setTransactions((prev) => prev.filter((t) => t.id !== id));
+    setTransactions((prev) => {
+      const updated = prev.filter((t) => t.id !== id);
+      localStorage.setItem(`budgetUser_txs_${userId}`, JSON.stringify(updated));
+      return updated;
+    });
 
     try {
       await deleteTransaction(id);
-    } catch (err) {
-      console.error("Error deleting transaction:", err);
-      // Rollback on failure
-      setTransactions(previousTransactions);
-      alert("Failed to delete transaction. Restoring...");
+    } catch {
+      // Local deletion already persisted
     }
   };
 
@@ -834,11 +892,10 @@ export default function BudgetApp({ userId, username, onLogout }) {
     }
 
     const txToUpdate = { ...editingTx };
-    const previousTransactions = [...transactions];
 
-    // Instant UI update
-    setTransactions((prev) =>
-      prev.map((t) =>
+    // Instant UI update & local storage update
+    setTransactions((prev) => {
+      const updated = prev.map((t) =>
         t.id === txToUpdate.id
           ? {
               ...t,
@@ -849,13 +906,15 @@ export default function BudgetApp({ userId, username, onLogout }) {
               description: txToUpdate.description,
             }
           : t
-      )
-    );
+      );
+      localStorage.setItem(`budgetUser_txs_${userId}`, JSON.stringify(updated));
+      return updated;
+    });
     setEditingTx(null);
 
     try {
       const updated = await updateTransaction(txToUpdate.id, {
-        userId: parseInt(userId),
+        userId: !isNaN(parseInt(userId, 10)) ? parseInt(userId, 10) : undefined,
         name: txToUpdate.name,
         amount: parseFloat(txToUpdate.amount),
         type: txToUpdate.type,
@@ -863,15 +922,14 @@ export default function BudgetApp({ userId, username, onLogout }) {
         description: txToUpdate.description,
       });
       if (updated && updated.id) {
-        setTransactions((prev) =>
-          prev.map((t) => (t.id === txToUpdate.id ? { ...t, ...updated } : t))
-        );
+        setTransactions((prev) => {
+          const synced = prev.map((t) => (t.id === txToUpdate.id ? { ...t, ...updated } : t));
+          localStorage.setItem(`budgetUser_txs_${userId}`, JSON.stringify(synced));
+          return synced;
+        });
       }
-    } catch (err) {
-      console.error("Error updating transaction:", err);
-      // Rollback on failure
-      setTransactions(previousTransactions);
-      alert("Failed to update transaction. Restoring...");
+    } catch {
+      // Local update already persisted
     }
   };
 
@@ -1880,7 +1938,7 @@ export default function BudgetApp({ userId, username, onLogout }) {
                       className="category-active-label"
                       style={{ color: getCategoryMeta(formData.category).color }}
                     >
-                      {getCategoryMeta(formData.category).icon} {formData.category}
+                      {getCategoryMeta(formData.category).icon} {t(formData.category || "General")}
                     </span>
                   </div>
                   <div className="category-chips-grid">
@@ -1912,7 +1970,7 @@ export default function BudgetApp({ userId, username, onLogout }) {
                           }}
                         >
                           <span className="cat-chip-icon">{cat.icon}</span>
-                          <span className="cat-chip-name">{cat.name}</span>
+                          <span className="cat-chip-name">{t(cat.name)}</span>
                         </button>
                       );
                     })}
@@ -1977,7 +2035,7 @@ export default function BudgetApp({ userId, username, onLogout }) {
                   >
                     {STANDARD_CATEGORIES.map((c) => (
                       <option key={c.name} value={c.name}>
-                        {c.icon} {c.name}
+                        {c.icon} {t(c.name)}
                       </option>
                     ))}
                   </select>
@@ -2170,7 +2228,7 @@ export default function BudgetApp({ userId, username, onLogout }) {
                     onClick={() => setCategoryFilter("ALL")}
                   >
                     <span>🌟</span>
-                    <span>All Categories</span>
+                    <span>{t("allCategories") || "All Categories"}</span>
                   </button>
                   {STANDARD_CATEGORIES.map((cat) => (
                     <button
@@ -2185,7 +2243,7 @@ export default function BudgetApp({ userId, username, onLogout }) {
                       onClick={() => setCategoryFilter(categoryFilter === cat.name ? "ALL" : cat.name)}
                     >
                       <span>{cat.icon}</span>
-                      <span>{cat.name}</span>
+                      <span>{t(cat.name)}</span>
                     </button>
                   ))}
                 </div>
@@ -2437,7 +2495,7 @@ export default function BudgetApp({ userId, username, onLogout }) {
                                             borderColor: `${meta.color}44`,
                                           }}
                                         >
-                                          {meta.icon} {tx.category || "General"}
+                                          {meta.icon} {t(tx.category || "General")}
                                         </span>
                                       </div>
                                       <p className="tx-date">
@@ -2620,7 +2678,7 @@ export default function BudgetApp({ userId, username, onLogout }) {
                                 borderColor: `${meta.color}40`,
                               }}
                             >
-                              {meta.icon} {tx.category || "General"}
+                              {meta.icon} {t(tx.category || "General")}
                             </span>
                           </div>
                         </div>
@@ -2829,7 +2887,7 @@ export default function BudgetApp({ userId, username, onLogout }) {
                                 borderColor: `${meta.color}40`,
                               }}
                             >
-                              {meta.icon} {tx.category || "Salary & Income"}
+                              {meta.icon} {t(tx.category || "Salary & Income")}
                             </span>
                           </div>
                         </div>

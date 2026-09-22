@@ -14,7 +14,7 @@
 	<name>budget</name>
 	<description>Steve Budget API</description>
 	<properties>
-		<java.version>25</java.version>
+		<java.version>17</java.version>
 		<skipTests>true</skipTests>
 		<start-class>com.steve.budget.BudgetApplication</start-class>
 	</properties>

@@ -1,7 +1,8 @@
 import { createContext, useContext, useState } from "react";
 import { useLanguage } from "./LanguageContext";
 
-const ThemeContext = createContext(null);
+const defaultThemeState = { theme: "dark", setTheme: () => {} };
+const ThemeContext = createContext(defaultThemeState);
 
 export function ThemeProvider({ children }) {
   const [theme, setThemeState] = useState(() => localStorage.getItem("budgetTheme") || "dark");
@@ -23,7 +24,8 @@ export function ThemeProvider({ children }) {
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function useTheme() {
-  return useContext(ThemeContext);
+  const context = useContext(ThemeContext);
+  return context || defaultThemeState;
 }
 
 export function ThemeToggle({ compact = false, showLabel = false, className = "" }) {

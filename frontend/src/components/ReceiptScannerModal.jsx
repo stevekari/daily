@@ -749,7 +749,7 @@ export default function ReceiptScannerModal({
                 {/* Category */}
                 <div>
                   <label style={{ fontSize: 11, fontWeight: 800, color: "#94a3b8", display: "block", marginBottom: 4 }}>
-                    Category:
+                    {t("selectCategory") || "Category"}:
                   </label>
                   <select
                     className="bs-form-input"
@@ -758,7 +758,7 @@ export default function ReceiptScannerModal({
                   >
                     {STANDARD_CATEGORIES.map((cat) => (
                       <option key={cat.name} value={cat.name}>
-                        {cat.icon} {cat.name}
+                        {cat.icon} {t(cat.name)}
                       </option>
                     ))}
                   </select>
