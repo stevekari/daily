@@ -13,7 +13,7 @@ ENV VITE_API_URL=${VITE_API_URL}
 RUN npm run build
 
 # Stage 2: Build Backend Spring Boot with embedded Frontend Assets
-FROM maven:3.9.9-eclipse-temurin-17-alpine AS backend-build
+FROM maven:3.9.9-eclipse-temurin-25-alpine AS backend-build
 WORKDIR /workspace/backend
 
 COPY backend/pom.xml .
@@ -22,8 +22,8 @@ COPY --from=frontend-build /workspace/frontend/dist ./src/main/resources/static
 
 RUN mvn clean package -DskipTests -Dmaven.test.skip=true
 
-# Stage 3: Production Runtime Container with Java 17 JRE
-FROM eclipse-temurin:17-jre-alpine
+# Stage 3: Production Runtime Container with Java 25 JRE
+FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
 
 # Ensure storage directory for persistent H2 database
